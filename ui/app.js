@@ -153,6 +153,25 @@
   }
 
   // ---------- boot ----------
+  // ---------- theme ----------
+  const THEME_KEY = 'learnwith.theme';
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    const b = $('#themeToggle'); if (b) b.textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+  function initTheme() {
+    let t = null;
+    try { t = localStorage.getItem(THEME_KEY); } catch (_) {}
+    if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    applyTheme(t);
+    const b = $('#themeToggle');
+    if (b) b.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem(THEME_KEY, next); } catch (_) {}
+    });
+  }
+
   async function boot() {
     try {
       const health = await fetch('/api/health').then((r) => r.ok).catch(() => false);
@@ -581,5 +600,6 @@
   }
 
   window.addEventListener('hashchange', router);
+  initTheme();
   boot();
 })();

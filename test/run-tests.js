@@ -5,6 +5,7 @@ const assert = require('assert');
 const { compile } = require(path.join(__dirname, '..', 'lib', 'compile'));
 const { compileRun } = require(path.join(__dirname, '..', 'lib', 'runner', 'subprocess'));
 const rules = require(path.join(__dirname, '..', 'lib', 'adaptive', 'rules'));
+const { parseLesson } = require(path.join(__dirname, '..', 'lib', 'content'));
 
 let pass = 0, fail = 0;
 function t(name, fn) { try { fn(); pass++; console.log('  ✓', name); } catch (e) { fail++; console.log('  ✗', name, '-', e.message); } }
@@ -37,6 +38,16 @@ t('renderLayer returns deep when mastered', () => {
   const um = rules.blankModel();
   for (let i = 0; i < 12; i++) rules.observe(um, 'borrowing', { correct: true });
   assert(rules.renderLayer(um, 'borrowing') === 'deep');
+});
+
+// --- content parser robustness ---
+console.log('content parser');
+t(':::Notice / unknown directives never emit [object Object]', () => {
+  const md = '---\ntitle: t\nconcepts: [a]\n---\n::: Notice\nbe careful\n:::\n::: warning\nheads up\n:::\n:::weird\nkept prose\n:::';
+  const l = parseLesson(md, { id: 'x' });
+  assert(l.body.some((s) => s.type === 'callout' && s.tone === 'info'));
+  assert(l.body.some((s) => s.type === 'callout' && s.tone === 'warn'));
+  assert(JSON.stringify(l).indexOf('[object Object]') === -1);
 });
 
 // --- course compile ---

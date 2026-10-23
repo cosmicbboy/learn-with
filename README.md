@@ -106,7 +106,8 @@ serverless/
 
    - `::: callout type="contrast" lang="python"` → a persona-aware sidebar (`type`
      drives the colour; the adaptive engine can route `base|contrast|deep|remedial`
-     layers).
+     layers). `::: notice`, `::: warning`, `::: tip`, `::: info`, … are aliases that
+     render as the matching callout tone automatically.
    - `::: exercise kind="code" concepts="ownership" difficulty="2" check="contains:ok"` →
      the split-view interactive exercise. The first fenced `rust` block is the starter
      code; a second fenced block under a `<solution>` marker (or labeled
@@ -117,6 +118,9 @@ serverless/
 3. **Run** it with `serve`; each exercise's output check is graded against real stdout.
 
 ## How the adaptation works
+
+There's a **light/dark theme toggle** in the header (persisted in `localStorage`, and it
+respects your OS `prefers-color-scheme` by default).
 
 The **rules engine** (pure JS, ships to the browser) keeps a per-concept user model:
 every correct/incorrect answer and hint moves a concept up/down a mastery ladder
