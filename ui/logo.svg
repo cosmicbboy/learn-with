@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="lw-badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6d28d9"/>
+      <stop offset="1" stop-color="#ea580c"/>
+    </linearGradient>
+  </defs>
+
+  <!-- badge -->
+  <rect x="3" y="3" width="58" height="58" rx="17" fill="url(#lw-badge)"/>
+
+  <!-- open book -->
+  <path d="M15 31 c0-6.5 4.5-10 10-10 4.5 0 7 1.6 9 3.4 2-1.8 4.5-3.4 9-3.4 5.5 0 10 3.5 10 10 v14 c0 0-4.2-2.5-10-2.5 -4.5 0-6.5 1.1-9 2.7 -2.5-1.6-4.5-2.7-9-2.7 -5.8 0-10 2.5-10 2.5 z" fill="#ffffff"/>
+
+  <!-- spine hint -->
+  <path d="M32 24.4 v21.3" stroke="#d8c9f5" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+
+  <!-- play / run button -->
+  <path d="M35 33.6 l9 5.4 -9 5.4 z" fill="#7c3aed"/>
+
+  <!-- spark of insight -->
+  <path d="M47 10 l1.7 3.6 L52.3 15.3 l-3.6 1.7 L47 20.6 l-1.7-3.6 -3.6-1.7 3.6-1.7 z" fill="#ffe08a"/>
+</svg>

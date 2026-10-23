@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>learn-with</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
   <!-- The static build bakes {mode:'static'} here; dynamic mode detects /api/health. -->
   <script>window.__LEARN_WITH__ = /*__LEARN_WITH_MODE__*/ null;</script>
 </head>
 <body>
   <div class="app">
     <header class="top">
-      <span class="brand">learn<span class="dot">·</span>with <span id="courseShort" class="mono"></span></span>
+      <span class="brand"><img class="brand-logo" src="logo.svg" alt="learn·with logo" width="28" height="28" /> <span>learn<span class="dot">·</span>with</span> <span id="courseShort" class="mono"></span></span>
       <span class="modebadge" id="modeBadge">…</span>
       <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode" aria-label="Toggle light or dark theme">🌙</button>
       <div class="progress-wrap">

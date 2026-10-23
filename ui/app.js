@@ -240,9 +240,18 @@
       hero.appendChild(b);
     }
 
-    // concept map with mastery badges
+    // concept map with mastery badges + legend key
     const cm = el('div', 'review', '');
-    cm.innerHTML = '<div style="width:100%;font-size:.85rem;color:var(--ink-soft);margin-bottom:.2rem">Concept mastery map</div>';
+    cm.appendChild(el('div', 'review-label', 'Concept mastery map'));
+    const legend = document.createElement('div');
+    legend.className = 'review-legend';
+    legend.innerHTML = [
+      ['var(--ink-soft)', 'unknown'],
+      ['var(--warn)', 'learning'],
+      ['#2563eb', 'practiced'],
+      ['var(--ok)', 'mastered'],
+    ].map(([c, n]) => `<span><i style="background:${c}"></i>${n}</span>`).join('');
+    cm.appendChild(legend);
     const concs = Object.keys(c.conceptMap).slice(0, 24);
     for (const k of concs) {
       const lvl = ADB.masteryLevelFor(S.um, k);
