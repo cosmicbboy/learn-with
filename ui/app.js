@@ -14,56 +14,90 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   function inline(s) {
-    return s
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
-      .replace(/\*([^*]+)\*/g, '<i>$1</i>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    let t = String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+    t = t.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    t = t.replace(/\*([^*]+)\*/g, '<i>$1</i>');
+    t = t.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return t;
   }
 
-  function codeBlockHTML(code) {
-    return `<div class="codeblock"><pre>${esc(code)}</pre></div>`;
+  function codeBlockHTML(code, lang) {
+    return `<div class="codeblock"><div class="cb-head">${lang ? `<span class="cb-lang">${esc(lang)}</span>` : ''}</div><pre><code>${esc(code)}</code></pre></div>`;
   }
 
-  // Block-level markdown renderer (headings, paragraphs, lists, code, blockquote, hr)
+  function isTableSep(line) { return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line); }
+
+  // Build a <table> from header + body rows (all `|`-delimited, contiguous).
+  function buildTable(rows) {
+    const split = (r) => {
+      let s = r.trim(); if (s.startsWith('|')) s = s.slice(1); if (s.endsWith('|')) s = s.slice(0, -1);
+      return s.split('|').map((c) => c.trim());
+    };
+    let cells = split(rows[0]);
+    let html = '<div class="tbl-wrap"><table>';
+    if (cells.length) html += `<thead><tr>${cells.map((c) => `<th>${inline(c)}</th>`).join('')}</tr></thead>`;
+    html += '<tbody>';
+    for (let k = 2; k < rows.length; k++) {
+      const cs = split(rows[k]);
+      // pad/trim to header width
+      while (cs.length < cells.length) cs.push('');
+      html += `<tr>${cs.slice(0, cells.length).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`;
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  // Block-level markdown renderer: headings, paragraphs, lists, tables, code,
+  // blockquote, hr. Kept dependency-free and injection-safe (everything escaped).
   function renderMD(text) {
     const src = String(text || '');
     const lines = src.split('\n');
     let html = '';
     let i = 0;
     let list = null; // {type,items}
-    const closeList = () => { if (list) { html += (list.type === 'ul' ? '<ul>' : '<ol>') + list.items.join('') + '</ul>' === '' ? '' : `<${list.type}>${list.items.join('')}</${list.type}>`; list = null; } };
     const flush = () => { if (list) { const t = list.type; html += `<${t}>${list.items.join('')}</${t}>`; list = null; } };
     while (i < lines.length) {
       const l = lines[i];
       const h = l.match(/^(#{1,4})\s+(.*)/);
       const ul = l.match(/^\s*[-*]\s+(.*)/);
       const ol = l.match(/^\s*\d+\.\s+(.*)/);
-      const fence = l.match(/^```([\w+-]*)\s*$/);
+      const q = l.match(/^\s*>\s?(.*)/);
+      const fence = l.match(/^```([\w+.-]*)\s*$/);
+      const isTblStart = /^\s*\|/.test(l);
+      const empty = l.trim() === '';
+
       if (fence) {
         flush();
         const b = [];
+        const lang = fence[1] || 'text';
         i++;
         while (i < lines.length && !/^```\s*$/.test(lines[i])) { b.push(lines[i]); i++; }
-        html += codeBlockHTML(b.join('\n'));
-      } else if (h) { flush(); const lvl = Math.min(4, h[1].length); html += `<h${lvl} id="h${++count}">${inline(h[2])}</h${lvl}>`; }
-      else if (ul || ol) {
-        const t = (ul ? 'ul' : 'ol');
+        html += codeBlockHTML(b.join('\n'), lang);
+      } else if (h) { flush(); const lvl = Math.min(4, h[1].length); html += `<h${lvl}>${inline(h[2])}</h${lvl}>`; }
+      else if (isTblStart && lines[i + 1] && isTableSep(lines[i + 1])) {
+        flush();
+        const rows = [l];
+        i++;
+        while (i < lines.length && /^\s*\|/.test(lines[i])) { rows.push(lines[i]); i++; }
+        html += buildTable(rows);
+        i--;
+      } else if (q) {
+        flush(); const qb = [q[1]]; i++;
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) { qb.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
+        html += `<blockquote>${inline(qb.join(' '))}</blockquote>`; i--;
+      } else if (ul || ol) {
+        const t = ul ? 'ul' : 'ol';
         if (!list || list.type !== t) { flush(); list = { type: t, items: [] }; }
         list.items.push(`<li>${inline((ul || ol)[1])}</li>`);
-      } else if (/^\s*>\s?/.test(l)) {
-        flush(); const q = []; while (i < lines.length && /^\s*>\s?/.test(lines[i])) { q.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
-        html += `<blockquote>${q.join(' ')}</blockquote>`; i--;
-      } else if (/^\s*(---|\*\*\*)\s*$/.test(l)) { flush(); html += '<hr/>'; }
-      else if (l.trim() === '') { flush(); }
+      } else if (/^\s*(---|\*\*\*)\s*$/.test(l)) { flush(); html += '<div class="hr"></div>'; }
+      else if (empty) { flush(); }
       else { flush(); html += `<p>${inline(l)}</p>`; }
       i++;
     }
     flush();
     return html;
   }
-  let count = 0;
 
   // ---------- Rust syntax highlighter (tiny tokenizer) ----------
   const KW = new Set(['as','break','const','continue','crate','else','enum','extern','false','fn','for','if','impl','in','let','loop','match','mod','move','mut','pub','ref','return','self','Self','static','struct','super','trait','true','type','unsafe','use','where','while','async','await','dyn']);
@@ -129,6 +163,7 @@
     S.course = course;
     $('#courseShort').textContent = course.id;
     $('#modeBadge').textContent = S.mode + (S.mode === 'dynamic' ? ' · live rustc' : '');
+    $('#modeBadge').classList.toggle('live', S.mode === 'dynamic');
     S.um = loadModel();
     S.runner = S.mode === 'dynamic' ? {
       kind: 'dynamic',
@@ -285,7 +320,7 @@
   function renderExercise(e) {
     const card = el('div', 'excard', '');
     const diff = '●'.repeat(e.difficulty || 2) + '○'.repeat(5 - (e.difficulty || 2));
-    card.appendChild(el('div', 'hd', `<b>Exercise</b> <span class="chips"><span class="diff">${esc(diff)}</span>${(e.concepts || []).map((c) => `<span class="diff" style="color:var(--accent)">#${esc(c)}</span>`).join(' ')}</span>`));
+    card.appendChild(el('div', 'hd', `<span class="dot"></span><b>Exercise</b> <span class="chips"><span class="diff" title="Difficulty">${esc(diff)}</span>${(e.concepts || []).map((c) => `<span class="chip-c">#${esc(c)}</span>`).join(' ')}</span>`));
 
     // predict / read-only exercises have no editor
     if (e.kind === 'predict') {
@@ -304,21 +339,18 @@
     // split view: editor + console
     const runwrap = el('div', 'runwrap', '');
     const editorPane = el('div', 'editor', '');
-    editorPane.appendChild(el('div', 'bar', `<span class="mono" style="font-size:.8rem">main.rs</span><span style="font-size:.72rem;color:var(--ink-soft)">real compiler · run to verify</span>`));
-    const ed = el('div', 'ed', '');
-    const ln = el('div', 'ln', '');
-    const ta = el('textarea', '', '');
-    ta.spellcheck = false;
-    ed.appendChild(ln); ed.appendChild(ta);
-    editorPane.appendChild(ed);
+    editorPane.appendChild(el('div', 'bar', `<span class="filetab mono">main.rs</span><span class="bar-note">real compiler · run to verify</span>`));
+    const ed = buildEditor(e.start || 'fn main() {\n    println!("hello");\n}');
+    const ta = ed.ta;
+    editorPane.appendChild(ed.el);
     const actions = el('div', 'actions', '');
-    const runBtn = el('button', 'btn primary', '▶ Run');
-    runBtn.onclick = () => doRun(e, ta, card, runBtn);
+    const runBtn = el('button', 'btn primary', '▶  Run');
+    runBtn.onclick = () => doRun(e, ta, card, runBtn, ed);
     actions.appendChild(runBtn);
     if (e.hints && e.hints.length) {
-      actions.appendChild(el('details', 'hints', `<summary>Get a hint</summary><ul>${e.hints.map((h) => `<li>${inline(h)}</li>`).join('')}</ul>`));
+      actions.appendChild(el('details', 'hints', `<summary>💡 Get a hint</summary><ul>${e.hints.map((h) => `<li>${inline(h)}</li>`).join('')}</ul>`));
     }
-    if (e.solution) actions.appendChild(el('details', 'sol', `<summary>Show solution</summary>${codeBlockHTML(e.solution)}`));
+    if (e.solution) actions.appendChild(el('details', 'sol', `<summary>👁 Show solution</summary>${codeBlockHTML(e.solution, 'rust')}`));
     editorPane.appendChild(actions);
     runwrap.appendChild(editorPane);
 
@@ -330,21 +362,67 @@
     body.appendChild(runwrap);
     card.appendChild(body);
 
-    // set editor content + line numbers + highlighting
-    setEditor(ta, ln, e.start || 'fn main() {\n    println!("hello");\n}');
-
-    card._state = { runCount: 0 };
+    card._state = { runCount: 0, ed };
     return card;
   }
 
-  function setEditor(ta, ln, code) {
+  // Rebuild the syntax-highlighted overlay once after the DOM settles.
+  function refreshEditorSync(ed) {
+    requestAnimationFrame(() => { syncScroll(ed); });
+  }
+
+  function syncScroll(ed) {
+    if (!ed || !ed.ta) return;
+    const { ta, hl, ln } = ed;
+    hl.scrollTop = ta.scrollTop;
+    hl.scrollLeft = ta.scrollLeft;
+    ln.scrollTop = ta.scrollTop;
+  }
+
+  // A real-ish editor: a highlighted <pre> beneath a transparent <textarea>,
+  // with a line-number gutter that scrolls in lock-step.
+  function buildEditor(code) {
+    const elmn = el('div', 'ed', '');
+    const ln = el('div', 'ln', '1');
+    elmn.appendChild(ln);
+    const wrap = el('div', 'codewrap', '');
+    const hl = el('pre', 'hl', '');
+    const ta = document.createElement('textarea');
+    ta.name = 'code';
+    ta.setAttribute('aria-label', 'Rust code editor');
+    ta.spellcheck = false;
+    ta.autocapitalize = 'off';
+    ta.autocomplete = 'off';
     ta.value = code;
-    const lines = Math.max(code.split('\n').length, 1);
-    ln.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
-    ta.addEventListener('input', () => {
-      const ls = ta.value.split('\n').length;
-      ln.textContent = Array.from({ length: ls }, (_, i) => i + 1).join('\n');
+    wrap.appendChild(hl);
+    wrap.appendChild(ta);
+    elmn.appendChild(wrap);
+    const ed = { el: elmn, ta, ln, hl };
+    ta.addEventListener('input', () => { paint(ed); });
+    ta.addEventListener('keydown', (ev) => {
+      // Tab inserts spaces (and keeps focus)
+      if (ev.key === 'Tab') {
+        ev.preventDefault();
+        const s = ta.selectionStart, e2 = ta.selectionEnd;
+        ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(e2);
+        ta.selectionStart = ta.selectionEnd = s + 4;
+        paint(ed);
+      }
     });
+    ta.addEventListener('scroll', () => syncScroll(ed));
+    ta.addEventListener('resize', () => paint(ed));
+    paint(ed);
+    return ed;
+  }
+
+  // Render highlighted code + line numbers, then realign the overlay.
+  function paint(ed) {
+    const { ta, ln, hl } = ed;
+    const code = ta.value;
+    const n = Math.max(code.split('\n').length, 1);
+    ln.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n');
+    hl.innerHTML = highlightRust(code) + (code.endsWith('\n') ? '<br>' : '');
+    syncScroll(ed);
   }
 
   async function doRun(e, ta, card, btn) {
@@ -431,19 +509,27 @@
   // ---------- quiz / MCQ renderer ----------
   function renderQuiz(q) {
     const card = el('div', 'quizcard', '');
-    card.appendChild(el('div', 'hd', `<b>Check your understanding</b> <span class="chips">${(q.concepts || []).map((c) => `<span class="diff" style="color:var(--accent)">#${esc(c)}</span>`).join(' ')}</span>`));
+    card.appendChild(el('div', 'hd', `<span class="dot"></span><b>Check your understanding</b> <span class="chips">${(q.concepts || []).map((c) => `<span class="chip-c">#${esc(c)}</span>`).join(' ')}</span>`));
     const body = el('div', 'exbody', '');
     body.appendChild(el('div', 'goal', renderMD(q.goal)));
     const opts = el('div', 'qopts', '');
     const fb = el('div', 'qfb', '');
+    const letters = 'ABCDEFGH';
     (q.options || []).forEach((opt, i) => {
-      const b = el('button', 'qopt', inline(opt));
+      const b = el('button', 'qopt', `<span class="key">${letters[i]}</span><span>${opt}</span>`);
       b.onclick = () => {
         const correct = String(i) === String(q.answer) || i === Number(q.answer);
         [...opts.children].forEach((c) => c.classList.remove('sel', 'right', 'wrong'));
         b.classList.add('sel');
-        if (correct) { b.classList.add('right'); fb.innerHTML = '<span class="ok">✔ Correct! That concept sharpens.</span>'; }
-        else { b.classList.add('wrong'); fb.innerHTML = `<span class="no">✘ Not quite.</span>`; }
+        if (correct) {
+          b.classList.add('right');
+          fb.innerHTML = '<span class="ok">✔ Correct! That concept sharpens.</span>';
+        } else {
+          b.classList.add('wrong');
+          const rightIdx = Number(q.answer);
+          if (q.options[rightIdx]) opts.children[rightIdx].classList.add('right');
+          fb.innerHTML = `<span class="no">✘ Not quite — the answer was ${letters[rightIdx] || ''}.</span>`;
+        }
         for (const c of q.concepts) ADB.observe(S.um, c, { correct, used_hint: false });
         if (correct) markDone(q);
         saveModel(); updateProgress();
@@ -463,12 +549,18 @@
     const idx = all.findIndex((x) => x.m.id === S.m.id && x.l.id === S.l.id);
     const prev = idx > 0 ? all[idx - 1] : null;
     let next = idx < all.length - 1 ? all[idx + 1] : null;
-    // adaptive: prefer the least-mastered next lesson in the same module
-    const sameMod = all.filter((x) => x.m.id === S.m.id && x.l.id !== S.l.id && idx < all.length && all.findIndex((y) => y.l.id === x.l.id) <= idx);
-    if (prev) { const b = el('button', 'btn', '← ' + (prev.m.id !== S.m.id ? 'Module ' + prev.m.id.split('-')[0] + ': ' : '') + esc(prev.l.title)); b.onclick = () => setPath(prev.m.id, prev.l.id); nav.appendChild(b); }
-    else nav.appendChild(el('span', '', ''));
-    if (next) { const b = el('button', 'btn primary', esc(next.l.title) + ' →'); b.onclick = () => setPath(next.m.id, next.l.id); nav.appendChild(b); }
-    else { const bb = el('button', 'btn primary', '🏁 Course complete → Home'); bb.onclick = () => { location.hash = ''; renderHome(); }; nav.appendChild(bb); }
+    // adaptive: prefer the next lesson in the same module
+    if (prev) {
+      const b = el('button', 'btn ghost', `<span class="nav-label">← Previous</span>${esc(prev.m.id !== S.m.id ? `Module ${prev.m.id.split('-')[0]}: ` : '')}${esc(prev.l.title)}`);
+      b.onclick = () => setPath(prev.m.id, prev.l.id); nav.appendChild(b);
+    } else nav.appendChild(el('span', '', ''));
+    if (next) {
+      const b = el('button', 'btn primary', `${esc(next.l.title)}<span class="nav-label">Next →</span>`);
+      b.onclick = () => setPath(next.m.id, next.l.id); nav.appendChild(b);
+    } else {
+      const bb = el('button', 'btn primary', '🏁 Course complete → Home');
+      bb.onclick = () => { location.hash = ''; renderHome(); }; nav.appendChild(bb);
+    }
     return nav;
   }
 
