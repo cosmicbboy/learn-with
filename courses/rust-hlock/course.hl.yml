@@ -1,0 +1,152 @@
+# learn-with course manifest
+id: rust-hlock
+title: Go AI Splunking to Learn Rust
+subtitle: hlock edition — learn Rust by mining a real, vibecoded production codebase
+author: learn-with
+blurb: |
+  You know Python, you're easy in JavaScript, you've poked R. Now you want **Rust** —
+  and the best way to learn a systems language is to get your hands on *real* code
+  and break it, fix it, and rebuild it. So we're going **AI Splunking**: an expedition
+  through **[hlock](https://github.com/unionai-oss/hlock)**, a production Rust project
+  that makes agent harnesses portable. Every concept in this course is taught against
+  an actual function or struct from that repo — you'll read the real thing, then type
+  Rust in a browser editor, hit **Run**, and watch it compile, run, or fail with real
+  compiler errors. Beginner-biased, tuned to your Python/JS brain, and the course
+  adapts to *you* as you go.
+persona:
+  python: 5
+  javascript: 4
+  r: 2
+defaultDifficulty: 2
+project:
+  repo: https://github.com/unionai-oss/hlock
+  note: A Rust workspace (harness-lock-core + PyO3 bindings) that pins/restores/syncs an agent harness to harness.lock.
+
+modules:
+  - id: 00-welcome
+    title: Meet Your Quarry
+    objectives:
+      - "Explain what hlock is and what Rust feels like next to Python/JS."
+      - "Know how to read a Cargo workspace and run the three cargo verbs."
+    lessons:
+      - id: meet-your-quarry
+        title: Meet your quarry (and the toolchain)
+        file: content/00-welcome/meet-your-quarry.md
+      - id: first-compile
+        title: First blood — compile something real
+        file: content/00-welcome/first-compile.md
+
+  - id: 01-hello
+    title: "First Blood: Hello, Rust"
+    objectives:
+      - "Write fn main, format strings, and see real compiler errors."
+      - "Translate Python/JS print idioms into Rust println!."
+    lessons:
+      - id: hello-rust
+        title: fn main, println!, and the borrow-checker's first scoldings
+        file: content/01-hello/hello-rust.md
+
+  - id: 02-manifest
+    title: The Manifest as Data
+    objectives:
+      - "Read real serde structs in hlock's manifest.rs and explain every derive."
+      - "Use Option, enums, BTreeMap, and #[serde(rename_all)]."
+    lessons:
+      - id: structs-and-derives
+        title: structs, derives, and the shape of harness.toml
+        file: content/02-manifest/structs-and-derives.md
+      - id: enums-options-maps
+        title: enums, Option, and maps — modeling a config tree
+        file: content/02-manifest/enums-options-maps.md
+
+  - id: 03-ownership
+    title: Ownership & the Borrow Checker
+    objectives:
+      - "Explain ownership, moves, and borrowing like a Python-/JS-trained mind."
+      - "Read hlock's hash.rs and fix real borrow errors."
+    lessons:
+      - id: ownership
+        title: Ownership — the big idea Rust is famous for
+        file: content/03-ownership/ownership.md
+      - id: borrowing-slices
+        title: Borrowing, references, slices, and String vs &str
+        file: content/03-ownership/borrowing-slices.md
+
+  - id: 04-errors
+    title: Errors Are Values
+    objectives:
+      - "Handle failure with Result/Option and the ? operator."
+      - "Model your own error enum with thiserror, like hlock's error.rs."
+    lessons:
+      - id: result-option
+        title: Result, Option, and the ? operator
+        file: content/04-errors/result-option.md
+      - id: thiserror
+        title: A real error enum with thiserror
+        file: content/04-errors/thiserror.md
+
+  - id: 05-enums-match
+    title: Enums & Pattern Matching
+    objectives:
+      - "Model alternatives with enums and exhaustively match them."
+    lessons:
+      - id: enums-match
+        title: Enums and match — your pattern-matching superpower
+        file: content/05-enums-match/enums-match.md
+
+  - id: 06-iterators
+    title: Iterators & the Standard Library
+    objectives:
+      - "Compose map/filter/fold and closures the Rust way."
+      - "Re-read hash.rs's recursive sorted() through an iterator lens."
+    lessons:
+      - id: iterators
+        title: Iterators, closures, and collecting without loops
+        file: content/06-iterators/iterators.md
+
+  - id: 07-traits
+    title: Traits & Generics
+    objectives:
+      - "Implement Display/Clone/Default and write a generic function."
+      - "Spot where hlock derives traits versus implements them."
+    lessons:
+      - id: traits
+        title: Traits — shared behaviour with zero inheritance
+        file: content/07-traits/traits.md
+
+  - id: 08-modules
+    title: Modules, Crates & the Workspace
+    objectives:
+      - "Navigate hlock's multi-crate workspace and feature flags."
+    lessons:
+      - id: modules
+        title: Crates, mods, and a tour of hlock's workspace
+        file: content/08-modules/modules.md
+
+  - id: 09-concurrency
+    title: Concurrency & the Worker
+    objectives:
+      - "Share work with Arc/Mutex, channels, and async in the spirit of hlock's worker."
+    lessons:
+      - id: concurrency
+        title: Threads, Arc, and async — running things in parallel
+        file: content/09-concurrency/concurrency.md
+
+  - id: 10-testing
+    title: Tests That Prove It
+    objectives:
+      - "Write unit, integration, and doc tests; cargo test a real function."
+    lessons:
+      - id: testing
+        title: #[test], #[cfg(test)], and proving hash.rs is deterministic
+        file: content/10-testing/testing.md
+
+  - id: 11-capstone
+    title: Capstone — Your Own hlock
+    objectives:
+      - "Compose every concept to build a tiny harness.lock reader from scratch."
+    capstone: true
+    lessons:
+      - id: build-your-own
+        title: Build your own mini-hlock (a harness.lock reader)
+        file: content/11-capstone/build-your-own.md

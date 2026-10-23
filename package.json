@@ -1,0 +1,23 @@
+{
+  "name": "learn-with",
+  "version": "0.1.0",
+  "description": "Autodidact's framework: compile a declarative adaptive course into a static site or a dynamic app that really runs code.",
+  "private": true,
+  "type": "commonjs",
+  "bin": {
+    "learn-with": "bin/learn-with.js"
+  },
+  "scripts": {
+    "build": "node bin/learn-with.js build courses/rust-hlock",
+    "serve": "node bin/learn-with.js serve courses/rust-hlock",
+    "test": "node test/run-tests.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "js-yaml": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "Apache-2.0"
+}

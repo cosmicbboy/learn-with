@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>learn-with</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- The static build bakes {mode:'static'} here; dynamic mode detects /api/health. -->
+  <script>window.__LEARN_WITH__ = /*__LEARN_WITH_MODE__*/ null;</script>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <span class="brand">learn<span class="dot">·</span>with <span id="courseShort" class="mono"></span></span>
+      <span class="modebadge" id="modeBadge">…</span>
+      <div class="progress-wrap">
+        <span id="progressPct"></span>
+        <progress class="prog" id="progressBar" max="100" value="0"></progress>
+      </div>
+    </header>
+
+    <main id="root"><div class="container" id="mount"></div></main>
+
+    <footer class="footer">
+      <div class="container" style="padding:0">
+        <span>learn-with</span> · declarative adaptive courses that compile to static or dynamic, and really run code.
+        <span class="mastery-legend" style="float:right">
+          <span><span style="background:var(--mastery-unknown)"></span>unknown</span>
+          <span><span style="background:var(--mastery-learning)"></span>learning</span>
+          <span><span style="background:var(--mastery-practiced)"></span>practiced</span>
+          <span><span style="background:var(--mastery-mastered)"></span>mastered</span>
+        </span>
+      </div>
+    </footer>
+  </div>
+  <script src="wasm-runner.js"></script>
+  <script src="adaptive.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
