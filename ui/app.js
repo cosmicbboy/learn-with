@@ -608,6 +608,10 @@
     else renderHome();
   }
 
+  // header logo -> home
+  const brand = $('#brandHome');
+  if (brand) brand.addEventListener('click', (e) => { e.preventDefault(); location.hash = ''; renderHome(); });
+
   window.addEventListener('hashchange', router);
   initTheme();
   boot();
