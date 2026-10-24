@@ -74,7 +74,7 @@ fn main() {
 This is how a *worker* pattern (like hlock's `worker.rs`) fans tasks out and collects
 results: spawn threads, send each a job over a channel, collect the `Ok`/`Err` results.
 
-::: exercise id="arc-clone" kind="code" concepts="concurrency" difficulty="3" check="exact:total: 4" hints="Run it: the `todo!()` panics inside every thread, so each thread needs a real handle to `shared`|`Arc::clone(&shared)` makes a new handle to the same counter and bumps the reference count|Replace the `todo!()` with `Arc::clone(&shared)`, and the `move` closure then carries `c` into its thread"
+::: exercise id="arc-clone" kind="code" concepts="concurrency" difficulty="3" check="exact:total: 4" hints="Run it: the `todo!()` panics in `main` before the first thread is even spawned, so each loop pass needs a real handle to `shared`|`Arc::clone(&shared)` makes a new handle to the same counter and bumps the reference count|Replace the `todo!()` with `Arc::clone(&shared)`, and the `move` closure then carries `c` into its thread"
 Fill in the missing line: replace the `todo!()` with an `Arc::clone` of `shared`, so each
 thread gets its own handle `c`. Notice the `move` on the closure: it moves that handle
 into the thread. The program spawns 4 threads that each increment the shared counter, so
@@ -403,11 +403,12 @@ async fn fetch_status(url: &str) -> String {
 }
 ```
 
-::: exercise id="chan-quiz" kind="mcq" concepts="concurrency" difficulty="2" options="Arc<T>|Mutex<T>|mpsc::channel|Vec<T>" answer="2" explain="`std::sync::mpsc::channel` returns a sender and a receiver, so one thread can `send` values that another `recv`s. `Arc` and `Mutex` are for shared state, not message passing."
-To send messages from one thread to another, which primitive do you use?
+::: exercise id="chan-quiz" kind="mcq" concepts="concurrency" difficulty="2" options="`std::sync::Arc`|`std::sync::Mutex`|`std::sync::mpsc::channel`|`std::thread::spawn`" answer="2" explain="`mpsc::channel()` returns a `(Sender, Receiver)` pair: one thread calls `send`, another calls `recv`, and the value moves across. `Arc` and `Mutex` are for *shared state*: both threads touch the same value, rather than one handing a message to the other. `thread::spawn` starts a thread but gives it no way to talk back, apart from the single value its `JoinHandle` returns."
+You want one thread to hand values to another, like Python's `queue.Queue`. Which std
+item do you reach for?
 :::
 
-::: exercise id="chan-quiz" kind="mcq" level="+" concepts="concurrency" difficulty="3" options="It won't compile: Rc's reference count isn't atomic, so Rc is not Send and can't move to another thread|It won't compile: the closure must borrow r instead of moving it|It compiles: Rc and Arc are interchangeable, Arc is only faster|It compiles but may print a torn value at runtime" answer="0" explain="`thread::spawn` requires everything the closure captures to be `Send`. `Rc` updates its count with plain, non-atomic arithmetic, so two threads cloning it could corrupt the count. Rust marks `Rc` as `!Send` and refuses at compile time. `Arc` is the atomic version, which is why threaded code uses it. Borrowing instead wouldn't help either, because a spawned thread may outlive the function."
+::: exercise id="chan-quiz" kind="mcq" level="+" concepts="concurrency" difficulty="3" options="Compile error: `Rc<i32>` cannot be sent between threads|Compile error: the closure must borrow `r`, not move it|Compiles and prints `5`, since `Rc` and `Arc` are interchangeable|Compiles, but the count may be corrupted at runtime" answer="0" explain="`thread::spawn` requires everything the closure captures to be `Send`. `Rc` updates its count with plain, non-atomic arithmetic, so two threads cloning it could corrupt the count. Rust marks `Rc` as `!Send` and rejects the program with E0277, so the runtime corruption never gets a chance to happen. `Arc` is the atomic version, which is why threaded code uses it. Borrowing instead of moving wouldn't help either, because a spawned thread may outlive the function, so `spawn` demands a `'static` closure."
 What does the compiler say about this program?
 
 ```rust
@@ -422,7 +423,7 @@ fn main() {
 ```
 :::
 
-::: exercise id="chan-quiz" kind="mcq" level="++" concepts="concurrency" difficulty="4" options="It hangs forever: main still owns the original tx, so the channel never closes and rx.iter() keeps waiting|It prints [0, 1, 2] and exits|It prints 0, 1 and 2 in some order and exits|It panics: three senders can't share one receiver" answer="0" explain="`rx.iter()` ends only when **every** `Sender` has been dropped. Each thread drops its clone when it finishes, but `main` still holds the original `tx`, so the receiver waits forever. Worker code calls `drop(tx)` before collecting, or moves the original sender into the last job. mpsc is multi-producer by design, so three senders are fine."
+::: exercise id="chan-quiz" kind="mcq" level="++" concepts="concurrency" difficulty="4" options="Hangs: `rx.iter()` never finishes|Prints `[0, 1, 2]` and exits|Prints the three ids in some order, then exits|Panics: three senders can't share one receiver" answer="0" explain="`rx.iter()` ends only when **every** `Sender` has been dropped. Each thread drops its clone when it finishes, but `main` still holds the original `tx`, so the receiver waits forever after the third value and nothing is printed. Worker code calls `drop(tx)` before collecting, or moves the original sender into the last job. mpsc is multi-producer by design, so three senders are fine."
 A worker fans out three jobs and collects the results. What happens when it runs?
 
 ```rust
@@ -441,7 +442,7 @@ fn main() {
 ```
 :::
 
-::: exercise id="chan-quiz" kind="mcq" level="+++" concepts="concurrency,expression" difficulty="5" options="It deadlocks or panics on the last line: g still holds the lock, and std's Mutex is not re-entrant|It prints 5|It deadlocks on the third line, because the guard from line 2 is still alive|It fails to compile, because a Mutex can only be locked once per scope" answer="0" explain="A guard that is never bound to a name is a **temporary**, and it drops at the end of its statement. So lines 2 and 3 each lock and unlock. `let g = ...` binds a guard, which lives to the end of the block. The last line then tries to lock again on the same thread while `g` is held. std's `Mutex` is not re-entrant, so that deadlocks or panics. The fix is `drop(g)` first, or summing through `g`. This is the same temporary rule that lets a worker write `rx.lock().unwrap().recv()` without holding the lock while it works."
+::: exercise id="chan-quiz" kind="mcq" level="+++" concepts="concurrency,expression" difficulty="5" options="Deadlocks (or panics) on the `let total` line|Prints `5 3`|Deadlocks on the `push` line|Fails to compile: a Mutex can be locked only once per scope" answer="0" explain="A guard that is never bound to a name is a **temporary**, and it drops at the end of its statement. So the `let n` and `push` lines each lock and unlock, which is why the `push` line is fine. `let g = ...` binds a guard, which lives to the end of the block. The `let total` line then tries to lock again on the same thread while `g` is held. std's `Mutex` is not re-entrant, so that deadlocks or panics (std only promises it won't return). It does compile, because the borrow checker can't see lock state. The fix is to sum through the guard you already hold (`g.iter().sum()`), which prints `5 3`, or to read `g.len()` and `drop(g)` before locking again. This is the same temporary rule that lets a worker write `rx.lock().unwrap().recv()` without holding the lock while it works."
 Single thread, no spawn. What happens?
 
 ```rust

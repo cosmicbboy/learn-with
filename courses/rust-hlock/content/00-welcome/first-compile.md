@@ -51,9 +51,9 @@ later).
 
 Now let's make you actually hit a borrow error, because that's your Splunking destiny.
 
-::: exercise id="moved-value" kind="code" concepts="ownership,expression" difficulty="2" hints="Read the error: it points at the line where `s` moved and the later line that still uses it|`let consumer = s;` hands ownership of the `String` to `consumer`, so `s` is empty after that line|Either print `s` before the move, or write `let consumer = &s;` so `consumer` only borrows it"
+::: exercise id="moved-value" kind="code" concepts="ownership,expression" difficulty="2" check="contains:made for rust" hints="Read the error: it points at the line where `s` moved and the later line that still uses it|`let consumer = s;` hands ownership of the `String` to `consumer`, so `s` can't be used after that line|Either print `s` before the move, or write `let consumer = &s;` so `consumer` only borrows it"
 This program won't compile — it's a `E0382 borrow of moved value`. Run it and read the
-error. Then fix it by using a *reference* (`&s`) in place of copying, OR by reordering so
+error. Then fix it by using a *reference* (`&s`) in place of the move, OR by reordering so
 you print before the move. Either way it must print `made for rust`.
 
 ```rust
@@ -121,11 +121,12 @@ Here's a founder-level Rust idea, visible as early as our little programs: in Ru
 everything is an **expression** that yields a value, and a function returns the last
 expression *without* a `return` keyword:
 
-::: exercise id="func-expression" kind="output" concepts="expression" difficulty="2" check="exact:12" hints="A function body's last expression, with no semicolon, is its return value|To double `n`, multiply it by 2|The body is just `n * 2`, with no `return` and no `;`"
-Fill in the body so `double(6)` returns `12`. **Don't use `return`**: the last
+::: exercise id="func-expression" kind="output" concepts="expression" difficulty="2" check="exact:12 42" hints="A function body's last expression, with no semicolon, is its return value|To double `n`, multiply it by 2|The body is just `n * 2`, with no `return` and no `;`"
+Fill in the body so `double` returns `n` doubled, making `double(6)` give `12` and
+`double(21)` give `42`. **Don't use `return`**: the last
 expression (with no semicolon) is the return value. A `;` would turn the expression into
 a *statement* that returns `()`, so leaving off the semicolon is the whole trick. Expected
-output: `12`.
+output: `12 42`.
 
 ```rust
 fn double(n: i32) -> i32 {
@@ -133,7 +134,7 @@ fn double(n: i32) -> i32 {
 }
 
 fn main() {
-    println!("{}", double(6));
+    println!("{} {}", double(6), double(21));
 }
 ```
 
@@ -144,7 +145,7 @@ fn double(n: i32) -> i32 {
 }
 
 fn main() {
-    println!("{}", double(6));
+    println!("{} {}", double(6), double(21));
 }
 ```
 :::
@@ -191,7 +192,7 @@ with a "mismatched types" error that's worth reading carefully).
 
 ## Quick self-check
 
-::: exercise id="expr-quiz" kind="mcq" concepts="expression" difficulty="1" options="n + 1 IS the return value (no semicolon)|A semicolon turns it into a statement returning ()|Both are valid and equivalent|Rust requires an explicit return keyword" answer="1" explain="The trailing `;` turns `n + 1` into a statement, so the body evaluates to `()` instead of `i32` and rustc reports mismatched types. Delete the semicolon and `n + 1` becomes the return value."
+::: exercise id="expr-quiz" kind="mcq" concepts="expression" difficulty="1" options="The `;` makes `n + 1` a statement, so the body's value is `()`, not `i32`|Rust needs an explicit `return` keyword to send a value back|Adding 1 to `n` could overflow `i32`, so rustc refuses to compile it|`n` is an immutable parameter, so `n + 1` needs `let mut n`" answer="0" explain="The trailing `;` turns `n + 1` into a statement, so the body has no final expression and evaluates to `()`, which doesn't match the declared `i32`. rustc reports E0308 mismatched types and suggests removing the semicolon. No `return` is needed: a final expression without `;` is the return value. Overflow is checked when the program runs, not at compile time. And `n + 1` builds a new value without changing `n`, so `n` doesn't need `mut`."
 ```rust
 fn inc(n: i32) -> i32 {
     n + 1;

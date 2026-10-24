@@ -47,10 +47,11 @@ if let Some(n) = opt {
 Enums can carry data, like hlock's `Error` variants do. Let's build a tiny "outcome":
 `Ok(count)`, `Skipped`, `Failed(reason)`.
 
-::: exercise id="enum-data" kind="code" concepts="enums,pattern_matching" difficulty="3" check="exact:processed 4" hints="Run it: the `todo!()` in the `Processed` arm panics before anything prints|A variant with data binds it in the pattern, so `n` already holds the count inside `Outcome::Processed(n)`|Print `processed {n}` in the first arm, then replace the `_` wildcard with `Outcome::Skipped` and `Outcome::Failed(why)` arms"
-Match on `Outcome` so the `Processed(count)` variant prints `processed 4`. Then replace
-the `_` wildcard with explicit arms for `Skipped` and `Failed(why)`, so every variant is
-handled by name. Expected output: `processed 4`.
+::: exercise id="enum-data" kind="code" concepts="enums,pattern_matching" difficulty="3" check="exact:processed 4; skipped; failed: bad json" hints="Run it: the `todo!()` in the `Processed` arm panics before anything prints|A variant with data binds it in the pattern, so `n` already holds the count inside `Outcome::Processed(n)`, and `format!` builds the `String` to return|Return `format!(...)` with `processed {n}` in the first arm, then replace the `_` wildcard with an `Outcome::Skipped` arm giving `String::from(...)` of `skipped` and an `Outcome::Failed(why)` arm giving `failed: {why}`"
+Finish `show` so it turns each `Outcome` into a line: `Processed(n)` gives `processed n`,
+`Skipped` gives `skipped`, and `Failed(why)` gives `failed: why`. Replace the `_`
+wildcard with explicit arms for `Skipped` and `Failed(why)`, so every variant is handled
+by name. `main` shows one of each. Expected output: `processed 4; skipped; failed: bad json`.
 
 ```rust
 enum Outcome {
@@ -59,13 +60,19 @@ enum Outcome {
     Failed(String),
 }
 
-fn main() {
-    let o = Outcome::Processed(4);
+fn show(o: Outcome) -> String {
     match o {
-        Outcome::Processed(n) => todo!(), // TODO: print processed {n}
+        Outcome::Processed(n) => todo!(), // TODO: processed {n}
         // TODO: replace this wildcard with Outcome::Skipped and Outcome::Failed(why) arms
         _ => todo!(),
     }
+}
+
+fn main() {
+    let a = show(Outcome::Processed(4));
+    let b = show(Outcome::Skipped);
+    let c = show(Outcome::Failed(String::from("bad json")));
+    println!("{a}; {b}; {c}");
 }
 ```
 
@@ -77,13 +84,19 @@ enum Outcome {
     Failed(String),
 }
 
-fn main() {
-    let o = Outcome::Processed(4);
+fn show(o: Outcome) -> String {
     match o {
-        Outcome::Processed(n) => println!("processed {n}"),
-        Outcome::Skipped => println!("skipped"),
-        Outcome::Failed(why) => println!("failed: {why}"),
+        Outcome::Processed(n) => format!("processed {n}"),
+        Outcome::Skipped => String::from("skipped"),
+        Outcome::Failed(why) => format!("failed: {why}"),
     }
+}
+
+fn main() {
+    let a = show(Outcome::Processed(4));
+    let b = show(Outcome::Skipped);
+    let c = show(Outcome::Failed(String::from("bad json")));
+    println!("{a}; {b}; {c}");
 }
 ```
 :::
@@ -319,18 +332,30 @@ fn main() {
 ```
 :::
 
-## Exhaustiveness catches you
+## When a match forgets a variant
 
-If you delete the `Outcome::Skipped` arm above, rustc complains: "non-exhaustive
-patterns." That's the guardrail. Let's prove we appreciate it:
+Here is the `Outcome` enum from the exercise above again, with the `Skipped` arm gone and
+no wildcard to catch it.
 
-::: exercise id="exhaustive-quiz" kind="mcq" concepts="enums" difficulty="2" options="It refuses to compile until every variant has an arm|It silently returns ()|It only compiles in debug|It adds a catch-all automatically" answer="0" explain="`match` must be exhaustive: if any enum variant has no arm, rustc stops with E0004 and names the missing patterns. So adding a variant to an enum in hlock points you at every `match` that needs updating."
-If a `match` on an enum is missing a variant arm, what does rustc do?
+::: exercise id="exhaustive-quiz" kind="mcq" concepts="enums" difficulty="2" options="A compile error: E0004, `Outcome::Skipped` not covered|A clean build that runs and prints nothing|A clean build that panics at runtime on `Skipped`|A warning only, as rustc adds a hidden `_ => {}` arm" answer="0" explain="`match` must be exhaustive: if any variant has no arm, rustc stops with E0004 and names the missing pattern, here `Outcome::Skipped`. Printing nothing is what Python's `match` does when no `case` fits, but Rust refuses to guess. There's no runtime panic either, because the program never gets built, and rustc never invents a catch-all arm for you. That's why adding a variant to an enum in hlock points you at every `match` that needs updating."
+What happens when you build and run this?
+
+```rust
+enum Outcome { Processed(u32), Skipped, Failed(String) }
+
+fn main() {
+    let o = Outcome::Skipped;
+    match o {
+        Outcome::Processed(n) => println!("processed {n}"),
+        Outcome::Failed(why) => println!("failed: {why}"),
+    }
+}
+```
 :::
 
 
-::: exercise id="exhaustive-quiz" kind="mcq" level="++" concepts="enums,pattern_matching" difficulty="3" options="It fails with E0004: Some(_) is not covered, because guards do not count toward exhaustiveness|It compiles: 0 and n > 0 together cover every u32|It compiles, but panics at runtime if it is ever given Some(5)|It compiles with only an unreachable-pattern warning" answer="0" explain="The exhaustiveness checker ignores what a guard says, because a guard is arbitrary code it cannot prove things about. As far as rustc knows, `Some(n) if n > 0` might match nothing, so `Some(_)` is still uncovered and it reports E0004. The fix is to drop the guard (plain `Some(n)` after `Some(0)`) or add a `Some(_)` arm."
-A subtler one. Does this compile?
+::: exercise id="exhaustive-quiz" kind="mcq" level="++" concepts="enums,pattern_matching" difficulty="3" options="No: E0004, because guards don't count toward exhaustiveness|Yes: `Some(0)` and `n > 0` together cover every `u32`|Yes, but it panics at runtime if no arm matches|Yes, with a warning that the guarded arm is redundant" answer="0" explain="The exhaustiveness checker ignores what a guard says, because a guard is arbitrary code it can't prove things about. As far as rustc knows, `Some(n) if n > 0` might match nothing, so it reports E0004 with `Some(1_u32..=u32::MAX)` not covered. The arithmetic really does cover every `u32`, but rustc never evaluates guards to find that out, and it never turns a non-exhaustive `match` into a runtime panic. The guarded arm isn't redundant either: an unreachable-pattern warning is for an arm that earlier arms already cover. The fix is to drop the guard (plain `Some(n)` after `Some(0)`) or add a `Some(_)` arm."
+Does this `match` with a guard compile?
 
 ```rust
 fn bucket(n: Option<u32>) -> &'static str {

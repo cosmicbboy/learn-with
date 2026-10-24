@@ -50,9 +50,9 @@ real copy you write `b = a.clone()`.
 
 ## Strings that can be copied vs moved
 
-Only types that are cheap trivially still implement `Copy`. Basic scalars do
+Only types that are trivially cheap to duplicate implement `Copy`. Basic scalars do
 (`i32`, `f64`, `bool`, `char`), so `let y = x;` for an integer *copies* and `x` stays
-alive. Heaps types like `String` and `Vec` do **not** implement `Copy` — they move.
+alive. Heap types like `String` and `Vec` do **not** implement `Copy` — they move.
 
 ```rust
 fn main() {
@@ -288,15 +288,15 @@ fn main() {
 
 ## Spot the move
 
-::: exercise id="move-spotter" kind="mcq" concepts="ownership" difficulty="2" options="It moves and a can no longer be used|It copies and a stays usable|It borrows the same data|It panics" answer="0" explain="`String` owns heap memory and is not `Copy`, so `let b = a;` moves ownership to `b`. Any later use of `a` is a compile error (E0382), the same error you fixed at the start of the course."
+::: exercise id="move-spotter" kind="mcq" concepts="ownership" difficulty="2" options="Moved: any later use of `a` is a compile error|Copied: `a` keeps its own `rust` and stays usable|Aliased: `a` and `b` share one String, like Python|Dropped: the String is freed as soon as `b` exists" answer="0" explain="`String` owns heap memory and is not `Copy`, so `let b = a;` *moves* ownership to `b`. `a` still exists as a name, but any later use of it is a compile error (E0382), the same error you fixed at the start of the course. It is not copied: only `Copy` types such as integers duplicate on assignment, and a `String` would need an explicit `.clone()`. It is not aliased: sharing without moving is what a borrow, `&a`, is for. And nothing is dropped, because the String now lives on in `b` and is freed when `b` goes out of scope."
 ```rust
 let a = String::from("rust");
 let b = a;
 ```
-What happens to `a`?
+After these two lines, what is the state of `a`?
 :::
 
-::: exercise id="move-spotter" level="++" kind="mcq" concepts="ownership" difficulty="3" options="It compiles: moving one field out is a partial move, and the other field is still usable|E0382 on the last line, because entry was moved|It compiles, because let path = entry.path copies the String|E0507: you can never move a field out of a struct" answer="0" explain="Moving `entry.path` out is a *partial move*. `entry` as a whole can no longer be used, because printing `entry` or passing it to a function would fail with E0382. Its other fields are still owned and usable, so `entry.hash` is fine. E0507 only applies when you try to move a field out from *behind a reference* such as `&Entry`."
+::: exercise id="move-spotter" level="++" kind="mcq" concepts="ownership" difficulty="3" options="It compiles and prints `agents.md sha256:11`|E0382 on the `println!`: `entry` was moved|E0507 on `let path`: a field can't be moved out|E0277 on `let path`: `String` is not `Copy`" answer="0" explain="Moving `entry.path` out is a *partial move*, and it is allowed. Only the whole `entry` becomes unusable: printing `entry` or passing it to a function would fail with E0382. Its other fields are still owned and usable, so reading `entry.hash` is fine and the program prints `agents.md sha256:11`. E0507 only applies when you move a field out from *behind a reference* such as `&Entry`, and here `entry` is owned. Nothing asks for `Copy` either: a non-`Copy` value simply moves instead of being copied."
 A lock entry shaped like the ones hlock writes to `harness.lock`:
 
 ```rust
@@ -308,10 +308,10 @@ fn main() {
     println!("{path} {}", entry.hash);
 }
 ```
-What does the compiler say?
+What happens when you build and run it?
 :::
 
-::: exercise id="move-spotter" level="+++" kind="mcq" concepts="ownership" difficulty="4" options="E0382: the for loop consumed hashes, so hashes.len() uses a moved value|It prints 2, because for loops borrow the Vec automatically|It prints 0, because the loop drained the Vec|E0502: the loop holds a mutable borrow" answer="0" explain="`for h in hashes` calls `IntoIterator::into_iter(hashes)`, which takes the `Vec` *by value*. Each `String` is moved into `h` and the vector is gone after the loop. To keep it, iterate a borrow with `for h in &hashes`, which yields `&String`."
+::: exercise id="move-spotter" level="+++" kind="mcq" concepts="ownership" difficulty="4" options="E0382: `hashes` was moved into the loop|Prints 2: a `for` loop borrows the Vec|Prints 0: the loop drained the Vec|E0502: the loop still borrows `hashes` mutably" answer="0" explain="`for h in hashes` calls `IntoIterator::into_iter(hashes)`, which takes the `Vec` *by value*. Each `String` is moved into `h` and the vector is gone after the loop, so `hashes.len()` is a use of a moved value (E0382). A `for` loop only borrows when you write `for h in &hashes`, which yields `&String` and would print 2. It can't print 0, because the program never compiles to run. And there is no mutable borrow anywhere, so it isn't E0502; borrows also end when the loop does."
 ```rust
 fn main() {
     let hashes = vec![String::from("sha256:11"), String::from("sha256:22")];

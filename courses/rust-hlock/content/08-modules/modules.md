@@ -32,9 +32,10 @@ unsafe_code = "forbid"
 - **`members`** lists each crate. `cargo build` at the root builds *all* of them.
 - **`[workspace.dependencies]`** centralises shared dependency versions — like a
   monorepo's shared `devDependencies`, so every crate pins the *same* serde.
-- `unsafe_code = "forbid"` is hlock telling the toolchain: no `unsafe` anywhere. That's
-  a *lints* setting that becomes a compile error if you write `unsafe`. Nice to enforce
-  in a safety-first project.
+- `unsafe_code = "forbid"` is hlock telling the toolchain: no `unsafe`. It's a *lints*
+  setting, and it turns any `unsafe` into a compile error in every member crate that opts
+  in with `[lints] workspace = true` in its own `Cargo.toml`. Nice to enforce in a
+  safety-first project.
 
 ## Crates, modules, and paths
 
@@ -361,8 +362,10 @@ flyte = ["harness-lock-core/flyte"]
 optional Flyte backend (and *propagates* that feature to the core crate — `harness-lock-core/flyte`).
 It's like an optional-dependency flag: `pip install hlock[flyte]`.
 
-::: exercise id="workspace-quiz" kind="mcq" concepts="modules" difficulty="1" options="Modify each member crate's puzzle|Build or test all crates in the workspace|Only build the root crate|Create a new git repo" answer="1" explain="At a workspace root, `cargo build` builds every member crate listed in `[workspace]`, all sharing one `Cargo.lock` and one `target/` directory. That's how hlock's crates build together with one command."
-Running `cargo build` at the workspace root will…?
+::: exercise id="workspace-quiz" kind="mcq" concepts="modules" difficulty="1" options="All four member crates|Only `crates/hlock`, the published CLI|Only `harness-lock-core`, the first member listed|Nothing, until you pick a crate with `-p`" answer="0" explain="A root `Cargo.toml` with no `[package]` is a *virtual* workspace, so `cargo build` there builds the workspace's default members, which in hlock is all four crates (with no `default-members` line it would be every member anyway). They share one `Cargo.lock` and one `target/` directory. Cargo doesn't pick the CLI or the first-listed crate for you, and `-p <crate>` is optional: it narrows the build to one member."
+hlock's root `Cargo.toml` is a pure workspace: it lists four `members` and has no
+`[package]` of its own. What does `cargo build` build when you run it in that root
+directory?
 :::
 
 
@@ -371,9 +374,9 @@ With the `[features]` table above, you run `cargo build -p hlock --features flyt
 happens to `harness-lock-core`?
 :::
 
-::: exercise id="workspace-quiz" kind="mcq" level="++" concepts="modules" difficulty="3" options="It fails to compile: a forbid lint cannot be relaxed by a later allow (E0453)|It compiles, because the local allow overrides the workspace lint|It compiles with a warning, because workspace lints are only advisory|It compiles in debug builds and fails only in release" answer="0" explain="`forbid` is `deny` that can't be overridden further down. Cargo passes the workspace lint to rustc as `-F unsafe_code`, so the inner `#[allow(unsafe_code)]` is itself an error (E0453), and so is the `unsafe` block. Members only get workspace lints when they opt in with `[lints] workspace = true`, which this crate has."
+::: exercise id="workspace-quiz" kind="mcq" level="++" concepts="modules" difficulty="3" options="A compile error, E0453: an `allow` can't relax a `forbid`|A clean build, because the local `allow` overrides the workspace lint|A clean build with a warning, because workspace lints are advisory|A clean debug build, with the error only under `--release`" answer="0" explain="`forbid` is `deny` that nothing further in can override. Cargo passes the workspace lint to rustc as `--forbid=unsafe_code`, so the inner `#[allow(unsafe_code)]` is itself an error, E0453 (allow incompatible with previous forbid), and the `unsafe` block is reported as an error too. A plain `deny` is the level a local `allow` *can* override. Workspace lints aren't advisory either: `forbid` is an error level, and it applies the same way in debug and release builds. Members only get workspace lints when they opt in with `[lints] workspace = true`, which this crate has."
 hlock's root sets `unsafe_code = "forbid"` under `[workspace.lints.rust]`. A contributor
-adds this to `harness-lock-core`, whose `Cargo.toml` has `[lints] workspace = true`:
+adds this to `crates/hlock`, whose `Cargo.toml` has `[lints] workspace = true`:
 
 ```rust
 #[allow(unsafe_code)]

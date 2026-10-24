@@ -86,7 +86,14 @@ in dark mode, starters that pass on their own) only showed up on screen.
    - "More practice" appears only after a second miss.
    - **Does the untouched starter already pass?** If so, it's a content bug. Use the
      `learn-with-author-course` skill and its audit script with `--run`.
-5. **Quiz.** A wrong pick invites a retry instead of revealing the answer. The answer is
+5. **Read every card as a learner, in place.** "Check your understanding", "Predict" and
+   "Exercise" cards can render perfectly and still be wrong as assessments. Read the
+   question, then the options: do the options answer *that* question? (A "Which
+   command…?" quiz once offered "It compiles and runs the binary"-style descriptions
+   instead of commands.) Then work through the authoring skill's "Reviewing
+   assessments" checklist, and run its audit, which flags option and stem mismatches,
+   "It…" option lists, length giveaways and Both/Neither options.
+   **Quiz mechanics:** a wrong pick invites a retry instead of revealing the answer. The answer is
    revealed after two misses or a correct pick, with "Why?" opened. Options render
    `code` and `Arc<T>` correctly (escaped, not swallowed as HTML). The right answer isn't
    always "A". Any code snippet the question refers to is shown.

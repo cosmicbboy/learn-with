@@ -186,10 +186,6 @@ fn main() {
 ```
 :::
 
-> The exercise above is intentionally awkward — the *goal* text and the *expected* output
-> must line up. When authoring, keep the check value and the starter code consistent. The
-> harness grades on real stdout.
-
 ## Closures: capturing, not just lambdas
 
 Closures can **capture** variables from their surroundings (like Python's closures or JS
@@ -458,12 +454,13 @@ fn main() {
 
 ## Wrap-up check
 
-::: exercise id="iter-quiz" kind="mcq" concepts="iterators" difficulty="1" options=".filter()|.collect()|.iter()|.new()" answer="2" explain="`.iter()` borrows the `Vec` and gives you an iterator over `&T`. Adapters like `.filter()` and consumers like `.collect()` are then chained onto that iterator."
-To turn a `Vec<T>` into an iterator, which method do you call first?
+::: exercise id="iter-quiz" kind="mcq" concepts="iterators" difficulty="1" options="`.iter()`|`.into_iter()`|`.collect()`|`.map()`" answer="0" explain="`.iter()` borrows the `Vec` and yields `&i32` items, so `nums` is still yours after the chain. `.into_iter()` also starts a chain, but it takes the `Vec` by value and moves it, so using `nums` afterwards is an error. `.collect()` is a consumer that *ends* a chain, and `.map()` is an adapter defined on iterators, not on `Vec`, so neither can come first."
+`nums` is a `Vec<i32>`. Which method starts the chain `nums.____.filter(...).collect()`
+so that it only *borrows* `nums`, leaving it usable afterwards?
 :::
 
 
-::: exercise id="iter-quiz" kind="mcq" level="+" concepts="iterators" difficulty="2" options="Only done, because map is lazy and nothing ever consumes it|saw 1, saw 2, saw 3, then done|done, then saw 1, saw 2, saw 3|Nothing: it fails to compile because doubled is never used" answer="0" explain="Iterator adapters like `.map` only build a description of the work. The closure runs when a consumer such as `.collect()`, `.sum()` or a `for` loop pulls items. Here nothing pulls, so only `done` prints (rustc warns that `doubled` is unused, which is a warning, not an error)."
+::: exercise id="iter-quiz" kind="mcq" level="+" concepts="iterators" difficulty="2" options="Only `done`|`saw 1`, `saw 2`, `saw 3`, then `done`|`done`, then `saw 1`, `saw 2`, `saw 3`|Nothing: an unused `doubled` is a compile error" answer="0" explain="Iterator adapters like `.map` only build a description of the work. The closure runs when a consumer such as `.collect()`, `.sum()` or a `for` loop pulls items. Here nothing pulls, so the `saw` lines never print, neither before nor after `done`. rustc does warn that `doubled` is unused, but that's a warning, not an error, so the program builds and prints only `done`."
 What does this program print?
 
 ```rust
@@ -478,7 +475,7 @@ fn main() {
 ```
 :::
 
-::: exercise id="iter-quiz" kind="mcq" level="++" concepts="iterators,collections" difficulty="3" options="A compile error: the for loop called into_iter() and moved pins|It prints a1, b2, then 2|It prints a1, b2, then 0, because the loop drained the Vec|It panics at runtime with a use-after-move" answer="0" explain="`for p in pins` desugars to `IntoIterator::into_iter(pins)`, which takes the `Vec` by value and hands out owned `String`s. After the loop `pins` has been moved, so `pins.len()` is E0382 (borrow of moved value). Write `for p in &pins` (which calls `.iter()`) to keep the Vec."
+::: exercise id="iter-quiz" kind="mcq" level="++" concepts="iterators,collections" difficulty="3" options="A compile error, E0382: the loop moved `pins`|`a1`, `b2`, then `2`|`a1`, `b2`, then `0`, because the loop emptied the Vec|`a1`, `b2`, then a runtime panic: use after move" answer="0" explain="`for p in pins` desugars to `IntoIterator::into_iter(pins)`, which takes the `Vec` by value and hands out owned `String`s. After the loop `pins` has been moved, so `pins.len()` is E0382 (borrow of moved value). Nothing prints at all, because the program doesn't build: the move is caught at compile time, so there's no emptied Vec to read and no runtime panic. Write `for p in &pins` (which calls `.iter()`) to keep the Vec."
 hlock walks its pins all the time. What happens here?
 
 ```rust

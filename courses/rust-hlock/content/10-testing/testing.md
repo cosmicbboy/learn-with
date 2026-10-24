@@ -45,7 +45,10 @@ fn deterministic() {
 }
 ```
 
-The whole point of `sorted()` (your iterator lesson) is to make these two equal.
+The whole point of `sorted()` (your iterator lesson) is to make these two equal, whatever
+order the keys arrive in. (With serde_json's default features its `Map` is a `BTreeMap`, which
+already sorts keys; `sorted()` keeps the hash stable even if the `preserve_order` feature
+is ever switched on, and the test pins that guarantee down.)
 
 ::: callout type="challenge"
 The harness's small runner can't run the whole `serde_json` crate standalone, but
@@ -131,7 +134,7 @@ fn trims_whitespace() {
 
 // #[should_panic(expected = "out of range")]
 fn rejects_out_of_range() {
-    todo!("call parse_level on \"9\", which must panic with out of range")
+    todo!("call parse_level on \"9\" and let it panic")
 }
 
 // --- a tiny stand-in for the cargo test runner: don't edit below ---
@@ -387,7 +390,8 @@ fn main() {
 `parse_lock_line(line: &str) -> Result<(String, String), String>` reads one line of a
 lock file, `name = sha256:<hex>`:
 - no `=` gives `Err("missing '='")`;
-- a hash that doesn't start with `sha256:` gives an `Err` that starts with `bad hash prefix`;
+- a hash that, once trimmed, doesn't start with `sha256:` gives an `Err` that starts with
+  `bad hash prefix`;
 - otherwise it returns `Ok((name, hash))` with spaces trimmed from both.
 
 Write five test functions with exactly these names. Each one panics on failure, as
@@ -491,9 +495,11 @@ fn main() {
 ```
 :::
 
+::: only until="0"
 > Plain `rustc` compiles the `#[cfg(test)]` module *out*, so here only `main` runs and
 > prints `double(3) = 6`. Under `cargo test` your `#[test]` would run too. On later
 > playthroughs you'll drive the tests from `main` yourself.
+:::
 
 ## The three test homes
 
@@ -503,22 +509,22 @@ fn main() {
 | `tests/foo.rs` | integration tests | black-box from outside |
 | `///` doc comments with code | doc tests | doctest in Python |
 
-::: exercise id="test-home" kind="mcq" concepts="testing" difficulty="1" options="#[cfg(test)] mod tests|A separate README|The main function only|A Dockerfile" answer="0" explain="Like most Rust crates, hlock keeps unit tests next to the code in a `#[cfg(test)] mod tests` block at the bottom of `hash.rs`. `cfg(test)` means the module is only compiled under `cargo test`, and it can reach private items through `use super::*`."
+::: exercise id="test-home" kind="mcq" concepts="testing" difficulty="1" options="In a `#[cfg(test)] mod tests` block inside `hash.rs`|In a separate file under `tests/`, like `tests/hash.rs`|In `///` doc comments above `content_hash`|In `fn main` of the `hlock` CLI crate" answer="0" explain="Like most Rust crates, hlock keeps unit tests next to the code in a `#[cfg(test)] mod tests` block at the bottom of `hash.rs`. `cfg(test)` means the module is only compiled under `cargo test`, and it can reach private items such as `sorted()` through `use super::*`. Files under `tests/` (like `tests/resolver.rs`) are *integration* tests that see only the public API, and `///` examples are *doc* tests. `fn main` is the program itself and isn't run by `cargo test`."
 Where does hlock write its unit tests for `hash.rs`?
 :::
 
-::: exercise id="test-home" kind="mcq" level="+" concepts="testing" difficulty="2" options="It can't: files in tests/ are compiled as a separate crate and only see the library's pub items|It works: use super::* reaches every item in the crate|It works, but only under cargo test, because cfg(test) unlocks private items|It works if the helper is marked #[cfg(test)]" answer="0" explain="Each file in `tests/` (like hlock's `tests/resolver.rs`) is its own crate that links the library from the outside, so it sees only the public API. `use super::*` works in a `mod tests` *inside* the file because a child module can see its parent's private items. To test a private helper, write a unit test next to it, or test it through the pub function that calls it."
+::: exercise id="test-home" kind="mcq" level="+" concepts="testing" difficulty="2" options="Compile error: `normalize` is private to the library crate|Works: `use super::*` reaches every item in the crate|Works, but only under `cargo test`, which unlocks private items|Works once `normalize` is marked `#[cfg(test)]`" answer="0" explain="Each file in `tests/` (like hlock's `tests/resolver.rs`) is its own crate that links the library from the outside, so it sees only the public API, and rustc rejects the call as private (E0603). `cfg(test)` only decides whether code is compiled; it never changes visibility, so neither `cargo test` nor a `#[cfg(test)]` on the helper helps. In an integration test file `super` has no parent to name at all. `use super::*` works in a `mod tests` *inside* the file because a child module can see its parent's private items. To test a private helper, write a unit test next to it, or test it through the pub function that calls it."
 hlock's `tests/resolver.rs` wants to call a **private** helper `fn normalize(...)` in
 the core crate's resolver module. What happens?
 :::
 
-::: exercise id="test-home" kind="mcq" level="++" concepts="testing" difficulty="3" options="That hashing ignores key order at every depth, which is the whole point of canonicalizing|Nothing more: both prove content_hash is a pure function|That content_hash never panics|That serde_json preserves insertion order" answer="0" explain="Hashing a value against itself only shows the function has no randomness. The real test builds `a` and `b` with the same data but keys in different orders, including inside the nested object in the array, and asserts equal hashes. That fails unless `sorted()` canonicalizes recursively. A test should be able to fail for the bug it guards against."
+::: exercise id="test-home" kind="mcq" level="++" concepts="testing" difficulty="3" options="That key order can't change the hash, even in nested objects|Nothing more: both only show content_hash is a pure function|That content_hash never panics on nested input|That serde_json preserves the insertion order of keys" answer="0" explain="Hashing a value against itself only shows the function has no randomness. The real test builds `a` and `b` with the same data but keys in different orders, including inside the nested object in the array, and asserts equal hashes. It would fail if key order ever leaked into the hash, so it guards `sorted()` (and serde_json's sorted default `Map`) against regressions. It says nothing about panics, and it would pass whether or not serde_json kept insertion order. A test should be able to fail for the bug it guards against."
 hlock's determinism test compares `content_hash(&a)` to `content_hash(&b)`, where `b`
 has `a`'s data with the keys reordered. What does it prove that
 `assert_eq!(content_hash(&a), content_hash(&a))` would not?
 :::
 
-::: exercise id="test-home" kind="mcq" level="+++" concepts="testing,expression" difficulty="4" options="It fails to compile under cargo test: each doc example is built as its own crate, so it needs a use line for the item, like any outside user|It passes: a doc example sees the items of the module it's written in|Nothing runs: code in /// comments is only rendered by rustdoc|It's skipped, because a doc example needs an explicit fn main" answer="0" explain="`cargo test` extracts every fenced example in `///` docs, wraps it in a `fn main`, and compiles it as a **separate crate** linked to yours. Like an integration test, it sees only pub items and has to import them with the crate's path. That is also why doctests are good documentation: they show exactly what a user has to write."
+::: exercise id="test-home" kind="mcq" level="+++" concepts="testing,expression" difficulty="4" options="The doctest fails: `content_hash` is not in scope|The doctest passes: it sees its own module's items|Nothing runs: `///` code is only rendered by rustdoc|The doctest is skipped: it has no explicit `fn main`" answer="0" explain="`cargo test` extracts every fenced example in `///` docs, wraps it in a `fn main` if it has none, and compiles it as a **separate crate** linked to yours. Like an integration test, it sees only pub items and has to import them with the crate's path, so without a `use` line `content_hash` is unresolved (E0425) and that doctest is reported as failed. That is also why doctests are good documentation: they show exactly what a user has to write."
 A `///` comment on `pub fn content_hash` contains this example, with no `use` line:
 
 ```rust

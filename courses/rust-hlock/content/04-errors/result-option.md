@@ -44,7 +44,7 @@ fn read_first_value() -> Result<i32, String> {
 `parse::<i32>()` returns `Result<i32, ParseIntError>`; `?` bubbles the error (mapped to
 our `String`) or gives us the number.
 
-::: exercise id="question-mark" kind="code" concepts="result_option,error_handling" difficulty="3" check="contains:Err(" hints="`.unwrap()` panics on an `Err`, but `?` returns the `Err` from the function early|The parse error is a `ParseIntError`, and the function returns `Result<i32, String>`, so convert the error first|Replace `.unwrap()` with `.map_err(...)` whose closure ignores the parse error and returns `String::from` of nope, then add `?` at the end"
+::: exercise id="question-mark" kind="code" concepts="result_option,error_handling" difficulty="3" check="contains:nope" hints="`.unwrap()` panics on an `Err`, but `?` returns the `Err` from the function early|The parse error is a `ParseIntError`, and the function returns `Result<i32, String>`, so convert the error first|Replace `.unwrap()` with `.map_err(...)` whose closure ignores the parse error and returns `String::from` of nope, then add `?` at the end"
 `twice_maybe` currently calls `.unwrap()`, so it panics on `wat`. Use `?` instead (with
 `map_err` to turn the parse error into the `String` `nope`) so the function returns
 `Err("nope")` on bad input. The program should print `Ok(16)` and then `Err("nope")`.
@@ -79,8 +79,8 @@ fn main() {
 ::: exercise id="question-mark" level="+" kind="code" concepts="result_option,error_handling" difficulty="4" check="exact:7 | missing comma | bad number: x" hints="`split_once(',')` returns an `Option`, but `?` in this function needs a `Result`. `ok_or` turns `None` into an `Err`|`?` converts a `&str` error into `String` by itself, since `String` implements `From<&str>`. The parse error still needs `map_err`, and the message must name the bad text|Use `let (a, b) = s.split_once(',').ok_or(...)?;`, then parse each half with `map_err` building `format!` with the text bad number: and the offending piece, and finish with `Ok((x, y))`"
 Two failure modes, one `?` each. `parse_pair` turns `a,b` into two numbers. With no
 comma it fails with `missing comma`. If either half isn't a number it fails with
-`bad number: <that half>`. Here `None` has to become an error first, and there's no
-`match` and no `unwrap`. Expected output: `7 | missing comma | bad number: x`.
+`bad number: <that half>`. Here `None` has to become an error first. Use no `match` and
+no `unwrap`. Expected output: `7 | missing comma | bad number: x`.
 
 ```rust
 fn parse_pair(s: &str) -> Result<(i32, i32), String> {
@@ -415,8 +415,8 @@ fn main() {
 
 ## Quick check
 
-::: exercise id="result-vs-option" kind="mcq" concepts="result_option" difficulty="1" options="It carries a value | It carries an error type E as well as a value | It never carries an error | It is the same as Option" answer="1" explain="`Option<T>` can only say a value is missing (`None`), while `Result<T, E>` also says what went wrong, carrying an error value `E` inside `Err`. That is how hlock's fallible functions report failures with context."
-`Result<T, E>` differs from `Option<T>` because…
+::: exercise id="result-vs-option" kind="mcq" concepts="result_option" difficulty="1" options="Why it failed, as an error value of type `E`|Whether a value came back at all|That the function may panic instead|Nothing: the two types are interchangeable" answer="0" explain="`Option<T>` can only say a value is missing (`None`). `Result<T, E>` also says *what went wrong*, by carrying an error value `E` inside `Err`. That is how hlock's fallible functions report failures with context. Whether a value came back is something both types tell you (`Some`/`None`, `Ok`/`Err`), so it isn't the difference. Neither type has anything to do with panics: a panic is a crash, while a `Result` is an ordinary value the caller handles. And they aren't interchangeable, though you can convert with `.ok()` (dropping the error) and `.ok_or(e)` (supplying one)."
+What can a `Result<T, E>` tell its caller that an `Option<T>` can't?
 :::
 
 ::: exercise id="result-vs-option" level="++" kind="mcq" concepts="result_option,error_handling" difficulty="3" options="Err for the x parse: collect stops at the first failure|Ok with the vector 1, 3: bad entries are skipped|Err holding both the x and y failures|A Vec of four Results, one per string" answer="0" explain="Collecting an iterator of `Result<T, E>` into `Result<Vec<T>, E>` short-circuits. It returns the first `Err` it meets and never looks at `y`. That's the iterator version of `?` in a loop. To *skip* bad entries instead, use `filter_map` with `.ok()`. To keep every result, collect into `Vec<Result<i32, _>>`."
@@ -429,7 +429,7 @@ let r: Result<Vec<i32>, _> = ["1", "x", "3", "y"]
 What is `r`?
 :::
 
-::: exercise id="result-vs-option" level="+++" kind="mcq" concepts="result_option,error_handling" difficulty="4" options="Ok(None), then Ok(Some(5)), then an Err|None, then Some(5), then None|Err for None, because there is nothing to parse|It does not compile, since you cannot map an Option into a Result" answer="0" explain="`s.map(...)` gives `Option<Result<i32, ParseIntError>>`, and `transpose()` swaps the layers into `Result<Option<i32>, ParseIntError>`. An absent value is not an error, so it becomes `Ok(None)`. A good value becomes `Ok(Some(5))`, and a bad one becomes `Err(...)`, which you can now `?`. This is the right shape for an *optional* field that must be valid when present."
+::: exercise id="result-vs-option" level="+++" kind="mcq" concepts="result_option,error_handling" difficulty="4" options="`Ok(None)`, then `Ok(Some(5))`, then `Err(..)`|`Ok(None)`, then `Ok(Some(5))`, then `Ok(None)`|`Err(..)`, then `Ok(Some(5))`, then `Err(..)`|A compile error: `transpose` can't swap these layers" answer="0" explain="`s.map(...)` gives `Option<Result<i32, ParseIntError>>`, and `transpose()` swaps the layers into `Result<Option<i32>, ParseIntError>`, which is exactly the declared return type, so it compiles. An absent value is not an error, so `None` becomes `Ok(None)`, not an `Err`. A good value becomes `Ok(Some(5))`. A bad one becomes `Err(..)`: `transpose` keeps the parse error rather than quietly turning it into `Ok(None)`, and you can now `?` it. This is the right shape for an *optional* field that must be valid when present."
 ```rust
 use std::num::ParseIntError;
 

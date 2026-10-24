@@ -22,8 +22,8 @@ output.
 ::: callout type="challenge" level="+++" title="Bedrock"
 No checkpoints this time. On this pass the capstone is two spec-only builds: a
 `harness.lock` parser with real error messages, then a full `hlock check` that verifies
-every locked skill against the files on disk. You design every type. There are no
-hints and no solution, only the spec and the expected output.
+every locked skill against the files on disk. You design every type, working from the
+spec and the expected output.
 :::
 
 ::: only until="++"
@@ -565,10 +565,10 @@ fn main() {
 ### Checkpoint 3 — report with iterators
 :::
 
-::: exercise id="cap-report" kind="code" until="++" concepts="iterators,expression" difficulty="3" check="contains:rust:3" hints="Turn each `Skill` into one line of text first, then glue the lines together|`skills.iter().map(...)` with a closure that calls `format!` on `s.name` and `s.level` gives you an iterator of `String`s like `rust:3`|Finish with `.collect::<Vec<_>>().join(...)`, joining on a newline"
+::: exercise id="cap-report" kind="code" until="++" concepts="iterators,expression" difficulty="3" check="exact:rust:3 / py:4" hints="Turn each `Skill` into one line of text first, then glue the lines together|`skills.iter().map(...)` with a closure that calls `format!` on `s.name` and `s.level` gives you an iterator of `String`s like `rust:3`|Finish with `.collect::<Vec<_>>().join(...)`, joining on a newline"
 Write `report` so it returns a `String` of `name:level` lines joined by `\n`, using
-iterator `.map` + `.collect::<Vec<_>>().join("\n")`. Expected output: `rust:3` then
-`py:4`.
+iterator `.map` + `.collect::<Vec<_>>().join("\n")`. `main` prints each newline as ` / `
+so the check can see both lines. Expected output: `rust:3 / py:4`.
 
 ```rust
 #[derive(Debug, Clone)]
@@ -583,7 +583,7 @@ fn main() {
         Skill { name: String::from("rust"), level: 3 },
         Skill { name: String::from("py"), level: 4 },
     ];
-    println!("{}", report(&skills));
+    println!("{}", report(&skills).replace('\n', " / ")); // shows the newline
 }
 ```
 
@@ -601,7 +601,7 @@ fn main() {
         Skill { name: String::from("rust"), level: 3 },
         Skill { name: String::from("py"), level: 4 },
     ];
-    println!("{}", report(&skills));
+    println!("{}", report(&skills).replace('\n', " / ")); // shows the newline
 }
 ```
 :::
@@ -1046,7 +1046,7 @@ fn main() {
 :::
 
 ::: exercise id="cap-bedrock-parse" kind="code" level="+++" concepts="structs,enums,result_option,error_handling,traits" difficulty="5" check="exact:v1: 3 skills [ai, py, rust]; error: unsupported lock version 2; error: line 4: expected key = value; error: skill py is missing field 'path'; error: line 4: unknown source svn:old/repo" hints="Keep a draft of the section you're in, with every field an Option, and turn it into a real skill when the next `[skill.*]` header or the end of the text closes it. That's where missing-field errors come from|`enumerate()` the raw lines so the numbers count blanks and comments, `split_once` on = for key = value, and strip the quotes with `trim_matches`|A `BTreeMap<String, LockedSkill>` gives the sorted names for free, and one `Display` impl on your error enum gives every error message"
-**Bedrock, part 1: the parser.** No starter types and no hints on this pass. Design
+**Bedrock, part 1: the parser.** No starter types on this pass. Design
 `Source`, a locked skill, a `Lockfile` and an error enum yourself, then write
 `parse_lock(text) -> Result<Lockfile, YourError>` for this fictional, TOML-ish
 `harness.lock`:

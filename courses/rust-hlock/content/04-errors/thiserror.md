@@ -705,11 +705,12 @@ hlock's `error.rs` read as plain English:
 - `Io(#[from] std::io::Error)` → "an IO variant, auto-convertible from any io error."
 - `#[error("io error: {0}")]` → "when displayed, say `io error:` then the inner error."
 
-::: exercise id="th-century-quiz" kind="mcq" concepts="error_handling" difficulty="2" options="It converts std::io::Error into Error::Io automatically|It forces every method to return an error|It turns the enum into an exception|It has no effect" answer="0" explain="`#[from]` makes thiserror generate an `impl From<std::io::Error> for Error`, so the `?` operator turns an I/O error into `Error::Io` automatically without a manual `map_err`."
-What does `#[from]` on the `Io` variant do?
+::: exercise id="th-century-quiz" kind="mcq" concepts="error_handling" difficulty="2" options="An `impl From<std::io::Error> for Error`|An `impl Display for Error` built from `#[error]`|A `try`/`catch` handler that traps io errors|A check that every fn returns `Result<T, Error>`" answer="0" explain="`#[from]` makes thiserror generate `impl From<std::io::Error> for Error`, wrapping the io error in `Error::Io`. That is what lets `?` turn an I/O error into `Error::Io` with no manual `map_err`. The `Display` impl comes from the `#[error(...)]` attribute, not from `#[from]`. Rust has no exceptions to catch: `?` just returns the converted `Err` early. And nothing forces other functions to use this type; they opt in by returning `Result<T, Error>`."
+What does `#[from]` on hlock's `Io(#[from] std::io::Error)` variant make thiserror
+generate?
 :::
 
-::: exercise id="th-century-quiz" level="++" kind="mcq" concepts="error_handling,traits" difficulty="3" options="It fails to compile: both attributes generate impl From of std::io::Error for Error, and the two impls conflict|The first variant wins, and the second is never constructed by ?|The last variant wins|The ? operator picks the variant at runtime from the io::ErrorKind" answer="0" explain="`#[from]` expands to an `impl From<std::io::Error> for Error`. Two of them for the same source type are conflicting trait impls (E0119), because `?` has to know statically which conversion to call. When you need two meanings for one source type, drop `#[from]` on at least one variant and build it explicitly with `map_err`."
+::: exercise id="th-century-quiz" level="++" kind="mcq" concepts="error_handling,traits" difficulty="3" options="E0119: two conflicting `From<io::Error>` impls|Compiles; `?` always builds `Io`, the first one|Compiles; `?` always builds `LockIo`, the last one|Compiles; `?` picks a variant by `io::ErrorKind`" answer="0" explain="Each `#[from]` expands to an `impl From<std::io::Error> for Error`. Two impls of the same trait for the same type conflict (E0119), so the derive's output doesn't compile. There is no first-wins or last-wins rule for trait impls, and `?` can't choose at runtime either: it calls `From::from`, and which impl that is must be known at compile time from the types alone, never from a value like the `ErrorKind`. When you need two meanings for one source type, drop `#[from]` on at least one variant and build it explicitly with `map_err`."
 Suppose you added a second I/O variant to an `error.rs` like hlock's:
 
 ```rust
@@ -724,7 +725,7 @@ pub enum Error {
 What happens?
 :::
 
-::: exercise id="th-century-quiz" level="+++" kind="mcq" concepts="error_handling,traits" difficulty="4" options="Error: followed by the Debug form of the value, such as Manifest with the message in quotes|Error: followed by the Display message from the #[error] attribute|Nothing is printed, and the process exits with code 1|A panic message and a backtrace" answer="0" explain="When `main` returns `Err(e)`, the `Termination` impl prints `Error: ` followed by `{:?}` of `e`, which is the *Debug* form. That's why the output looks like `Manifest(...)` and not `manifest error: ...`. The exit code is 1, and nothing panics. CLIs that want the friendly Display text handle the error in `main` themselves, or make their error type's `Debug` impl delegate to `Display`."
+::: exercise id="th-century-quiz" level="+++" kind="mcq" concepts="error_handling,traits" difficulty="4" options="`Error: ` and then the value's `Debug` form|`Error: ` and then the `#[error]` Display text|Nothing; the process just exits with code 1|A panic message, then a backtrace hint" answer="0" explain="When `main` returns `Err(e)`, the `Termination` impl prints `Error: ` followed by `{:?}` of `e`, which is the *Debug* form. That's why the output looks like `Manifest(...)` and not `manifest error: ...`. The exit code is 1, and nothing panics. CLIs that want the friendly Display text handle the error in `main` themselves, or make their error type's `Debug` impl delegate to `Display`."
 ```rust
 fn main() -> Result<(), Error> {
     Err(Error::Manifest("missing name".into()))

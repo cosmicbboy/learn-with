@@ -26,8 +26,9 @@ shape (`name!`) when Splunking, because hlock is full of them (`println!`, `form
 
 ## The template placeholder: `{}`
 
-You already interpolate strings; Rust uses `{}` for *display* anyway it can pretty-print
-a value, and `{:?}` for *debug* formatting:
+You already interpolate strings. Rust uses `{}` for *display* formatting (the
+human-facing form, like Python's `str()`) and `{:?}` for *debug* formatting (like
+`repr()`):
 
 ```rust
 fn main() {
@@ -67,16 +68,16 @@ Three things to do, in order:
 The concept behind E0382 is *ownership* — the Big Idea we formally unlock next module.
 For now, feel it out hands-on.
 
-::: exercise id="scold-moved" kind="code" concepts="ownership,string_vs_str" difficulty="2" hints="The help block points at the exact line that moved `s` and the line that used it afterwards|Any use of `s` has to happen before ownership passes to `consumer`|Move the `made for {s}` print above `let consumer = s;` and leave the consumer line as it is"
-Run this and **read the whole error** including the help block. Then fix it: print `s`
-*before* it's moved, and keep the consumer line. Expected output: `made for rust`, then
-`consumer says rust`.
+::: exercise id="scold-moved" kind="code" concepts="ownership,string_vs_str" difficulty="2" check="exact:made for rust, consumer says rust" hints="The error points at the line that moved `s` and the later line that still uses it|Any use of `s` has to happen before ownership passes to `consumer`|Move the `made for {s}` print above `let consumer = s;` and leave the consumer line as it is"
+Run this and **read the whole error**, including the help block. Then fix it: print `s`
+*before* it's moved, and keep the consumer line. (`print!` is `println!` without the line
+break, so both parts land on one line.) Expected output: `made for rust, consumer says rust`.
 
 ```rust
 fn main() {
     let s = String::from("rust");
     let consumer = s;
-    println!("made for {s}");
+    print!("made for {s}, ");
     println!("consumer says {consumer}");
 }
 ```
@@ -85,7 +86,7 @@ fn main() {
 ```rust
 fn main() {
     let s = String::from("rust");
-    println!("made for {s}");
+    print!("made for {s}, ");
     let consumer = s;
     println!("consumer says {consumer}");
 }
@@ -147,8 +148,9 @@ In Python terms: a `String` is the actual str object you own; a `&str` is *a ref
 str data that lives somewhere else* (like passing `chars: bytes` without the list).
 
 ::: exercise id="string-convert" kind="code" concepts="string_vs_str" difficulty="2" check="contains:borrowed: hello" hints="`owned` needs its own heap copy of the text, and `borrowed` only needs to look at `s`|`String` has a method that duplicates it, and `&` creates a reference|Use `s.clone()` for `owned` and `&s` (or `s.as_str()`) for `borrowed`"
-Replace the two `todo!()`s so the program prints `owned: hello` then `borrowed: hello`.
-Use `s.clone()` for the owned copy and `&s` (or `s.as_str()`) for the borrowed view.
+Replace the two `todo!()`s without moving `s`: `owned` is a full copy of `s` that you own,
+and `borrowed` is a view of `s` that you don't. The program should print `owned: hello`,
+then `borrowed: hello`.
 
 ```rust
 fn main() {
@@ -210,10 +212,10 @@ fn main() {
 
 ## Self-check
 
-::: exercise id="macro-spotter" kind="mcq" concepts="expression" difficulty="1" options="println!|main|fn String|format" answer="0" explain="The trailing `!` marks a macro invocation, so `println!` is a macro: it expands at compile time and checks its format string against its arguments. `main` is a function, and `String` is a type."
-Which of these is a *macro* (notice the `!`)?
+::: exercise id="macro-spotter" kind="mcq" concepts="expression" difficulty="1" options="`println!(...)`|`String::from(...)`|`name.len()`|`main()`" answer="0" explain="The `!` after the name marks a macro call, so `println!(...)` is a macro: it expands at compile time and checks its template against its arguments. `String::from(...)` is an ordinary associated function of the `String` type, `name.len()` is a method call, and `main()` calls a plain function. None of them has a `!`."
+You'll read all four of these calls in Rust code. Which one is a *macro* call?
 :::
 
-::: exercise id="macro-spotter" kind="mcq" level="+" concepts="expression" difficulty="2" options="String::from(...)|vec![1, 2, 3]|format!(...)|#[derive(Debug)]" answer="0" explain="`String::from` is an ordinary associated function: it runs at run time and has no `!`. `vec!` and `format!` are function-like macros, and the `!` gives them away even with square brackets. `#[derive(Debug)]` is an attribute that invokes a *derive macro*, which generates the `Debug` impl at compile time without any `!`."
+::: exercise id="macro-spotter" kind="mcq" level="+" concepts="expression" difficulty="2" options="`String::from(...)`|`vec![1, 2, 3]`|`format!(...)`|`#[derive(Debug)]`" answer="0" explain="`String::from` is an ordinary associated function: it runs at run time and has no `!`. `vec!` and `format!` are function-like macros, and the `!` gives them away even with square brackets. `#[derive(Debug)]` is an attribute that invokes a *derive macro*, which generates the `Debug` impl at compile time without any `!`."
 hlock's source uses all four of these. Which one is **not** a macro?
 :::

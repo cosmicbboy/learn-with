@@ -49,6 +49,18 @@ function passes(r, check) {
           if (!e.explanation) add('WARN', w, 'mcq has no explain= (learners who miss get no "why")');
           if ((e.options || []).length < 3) add('WARN', w, 'mcq has fewer than 3 options');
           if (e.answer == null || !e.options[Number(e.answer)]) add('ERROR', w, `mcq answer=${e.answer} does not index an option`);
+          // options must answer the question asked (a "which command" stem needs commands)
+          const stem = (e.goal || '').replace(/\s+/g, ' ');
+          const kindAsked = (stem.match(/\bwhich (command|line|function|method|type|trait|crate|attribute|macro|flag|file)\b/i) || [])[1];
+          const opts = e.options || [];
+          if (kindAsked && opts.filter((o) => /`/.test(o)).length < Math.ceil(opts.length / 2)) add('WARN', w, `stem asks "which ${kindAsked.toLowerCase()}" but most options aren't code — make each option a ${kindAsked.toLowerCase()}`);
+          if (opts.length >= 3 && opts.filter((o) => /^it\b/i.test(o.trim())).length >= opts.length - 1) add('WARN', w, 'options all start with "It…" — make the options parallel short answers to the stem');
+          const right = opts[Number(e.answer)] || '', others = opts.filter((_, i) => i !== Number(e.answer));
+          if (right && others.length && right.length > 1.6 * Math.max(...others.map((o) => o.length))) add('WARN', w, 'the right option is much longer than every distractor — a length giveaway');
+          if (opts.some((o) => /^(both|neither|all of the above|none of the above)\b/i.test(o.trim()))) add('WARN', w, 'a "Both/Neither/All/None" option — make sure exactly one answer is defensible');
+          const reason = /\b(because|since|so)\b|: /i;
+          if (/\bbecause\b/i.test(right) && !others.some((o) => reason.test(o))) add('WARN', w, 'only the right option carries a "because…" reason — options state outcomes; reasons go in explain=');
+          if (/^(a subtler one|now a harder one|same as above)|\b(the (quiz|exercise|card) above)\b/i.test(stem.trim())) add('WARN', w, 'stem leans on another card — at a deeper depth that card may not be shown; make the stem stand alone');
         }
         if (e.kind === 'predict' && e.expected == null) add('ERROR', w, 'predict has no ```text:expected block — it can never be completed');
         if (['code', 'fill', 'output'].includes(e.kind)) {
@@ -58,6 +70,10 @@ function passes(r, check) {
           if (!e.check || e.check.mode === 'none') add('WARN', w, 'no check= — any clean compile counts as correct');
           else if (e.check.mode === 'contains' && e.check.value && e.check.value.trim().length <= 2) add('WARN', w, `weak check "${e.check.mode}:${e.check.value}" — almost any output passes`);
           if (e.start && e.solution && e.start.trim() === e.solution.trim()) add('ERROR', w, 'starter is identical to the solution');
+          // a todo!("…") message that repeats the checked text turns the starter green
+          if (e.check && e.check.mode === 'contains' && e.start) {
+            for (const m of e.start.matchAll(/(?:todo|unimplemented|panic)!\(\s*"([^"]*)"/g)) if (m[1].includes(e.check.value)) add('ERROR', w, `the starter's ${m[0].split('!')[0]}! message contains the check text "${e.check.value}" — the unfinished starter can pass`);
+          }
         }
       }
     }

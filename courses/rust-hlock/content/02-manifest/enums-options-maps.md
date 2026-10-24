@@ -233,12 +233,13 @@ fn main() {
 
 ## Your turn: an enum for harness kinds
 
-::: exercise id="enum-match-practice" kind="code" concepts="enums,pattern_matching" difficulty="2" check="exact:cli is local-first" hints="Run it: the `todo!()` panics, so each arm needs a real message|Replace the `_` wildcard with one arm per remaining variant, written as `HarnessKind::Server => ...` and `HarnessKind::Library => ...`|The `Cli` arm should produce the string `cli is local-first`, and the other two get `server is remote` and `library is embeddable`"
-The `HarnessKind` enum has `Cli`, `Server`, and `Library` variants, but the `match` is
-still a scaffold of `todo!()`s and a `_` wildcard. Give `Cli` the message
+::: exercise id="enum-match-practice" kind="code" concepts="enums,pattern_matching" difficulty="2" check="exact:cli is local-first; server is remote; library is embeddable" hints="Run it: the `todo!()` panics, so each arm needs a real message|Replace the `_` wildcard with one arm per remaining variant, written as `HarnessKind::Server => ...` and `HarnessKind::Library => ...`|The `Cli` arm should produce the string `cli is local-first`, and the other two get `server is remote` and `library is embeddable`"
+The `HarnessKind` enum has `Cli`, `Server`, and `Library` variants, but the `match` in
+`describe` is still a scaffold of `todo!()`s and a `_` wildcard. Give `Cli` the message
 `cli is local-first`, and replace the wildcard with explicit `Server` (`server is remote`)
-and `Library` (`library is embeddable`) arms. The program should print exactly
-`cli is local-first`.
+and `Library` (`library is embeddable`) arms. `main` describes all three kinds, so the
+program should print exactly
+`cli is local-first; server is remote; library is embeddable`.
 
 ```rust
 enum HarnessKind {
@@ -247,14 +248,19 @@ enum HarnessKind {
     Library,
 }
 
-fn main() {
-    let k = HarnessKind::Cli;
-    let msg: &str = match k {
+fn describe(k: HarnessKind) -> &'static str {
+    match k {
         HarnessKind::Cli => todo!(), // TODO: the cli message
         // TODO: replace this wildcard with HarnessKind::Server and HarnessKind::Library arms
         _ => todo!(),
-    };
-    println!("{msg}");
+    }
+}
+
+fn main() {
+    let cli = describe(HarnessKind::Cli);
+    let server = describe(HarnessKind::Server);
+    let library = describe(HarnessKind::Library);
+    println!("{cli}; {server}; {library}");
 }
 ```
 
@@ -266,14 +272,19 @@ enum HarnessKind {
     Library,
 }
 
-fn main() {
-    let k = HarnessKind::Cli;
-    let msg = match k {
+fn describe(k: HarnessKind) -> &'static str {
+    match k {
         HarnessKind::Cli => "cli is local-first",
         HarnessKind::Server => "server is remote",
         HarnessKind::Library => "library is embeddable",
-    };
-    println!("{msg}");
+    }
+}
+
+fn main() {
+    let cli = describe(HarnessKind::Cli);
+    let server = describe(HarnessKind::Server);
+    let library = describe(HarnessKind::Library);
+    println!("{cli}; {server}; {library}");
 }
 ```
 :::
@@ -496,7 +507,7 @@ fn main() {
 ```
 :::
 
-::: exercise id="transport-alias" kind="mcq" level="++" concepts="serde,enums" difficulty="4" options="StreamableHttp|streamable-http|http|stdio" answer="0" explain="On an enum, `rename_all` renames every *variant*, so `StreamableHttp` is spelled `streamable-http` and `Stdio` is spelled `stdio`. `alias` adds `http` as a second accepted spelling for one variant. Renaming *replaces* the Rust name instead of adding to it, so the original `StreamableHttp` is the only one rejected."
+::: exercise id="transport-alias" kind="mcq" level="++" concepts="serde,enums" difficulty="4" options="`StreamableHttp`|`streamable-http`|`http`|`stdio`" answer="0" explain="On an enum, `rename_all` renames every *variant*, so `StreamableHttp` is spelled `streamable-http` and `Stdio` is spelled `stdio`. `alias` adds `http` as a second accepted spelling for one variant. Renaming *replaces* the Rust name instead of adding to it, so the original `StreamableHttp` is the only one rejected."
 A transport enum shaped like the ones in hlock's manifest:
 
 ```rust
@@ -635,6 +646,6 @@ lockfile with `BTreeMap`, because a deterministic key order is what makes the lo
 stable from one run to the next.
 :::
 
-> Notice the `match` produced a *value* (`let msg = match ...`), and the last arm
-> `Library` was required — remove it and the compiler refuses. Exhaustiveness is the
-> feature.
+> Notice the `match` produced a *value*: it is the whole body of `describe`, with no
+> `return`. And every arm was required — remove the `Library` arm and the compiler refuses
+> with E0004 (non-exhaustive patterns). Exhaustiveness is the feature.

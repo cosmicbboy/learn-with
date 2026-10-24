@@ -43,16 +43,19 @@ Here's hlock-real correctness: you cannot hold a shared `&` and a mutable `&mut`
 same data at the same time. That's an `E0502` "cannot borrow as mutable" — googling
 that code gets you straight to a fix.
 
-::: exercise id="two-borrows" kind="code" concepts="borrowing,lifetimes" difficulty="3" hints="A shared borrow stays alive until its last use, which here is the `println!` after `count += 1`|You can't mutate `count` while `a` is still going to be read|Take both borrows and print `a={a} b={b}` first, then do `count += 1` and print `now {count}`"
-This truly won't compile — E0502. Here `a` (a shared borrow) is used *after* you mutate
-`count`, so the borrow really is alive across the mutation. Run it, read the error, then
-reorder so both shared prints happen before you mutate. Output: `a=1 b=1` then `now 2`.
+::: exercise id="two-borrows" kind="code" concepts="borrowing,lifetimes" difficulty="3" check="contains:now 2" hints="A shared borrow stays alive until its last use, which here is the `println!` after `count += 1`|You can't mutate `count` while `a` is still going to be read|Take both borrows and print `a={a} b={b}` first, then do `count += 1` and print `now {count}`"
+This truly won't compile. Here `a` (a shared borrow) is used *after* you mutate `count`,
+so the borrow really is alive across the mutation. Because `count += 1` *assigns* rather
+than taking a `&mut`, the error is E0506 ("cannot assign to `count` because it is
+borrowed"), the assignment cousin of E0502. Run it, read the error, then reorder so both
+shared reads are printed before you mutate, and add a second line that prints the new
+value. Expected output: `a=1 b=1`, then `now 2` on the next line.
 
 ```rust
 fn main() {
     let mut count = 1;
     let a = &count;        // shared borrow starts
-    count += 1;            // E0502: count is borrowed here
+    count += 1;            // E0506: count is borrowed here
     let b = &count;
     println!("a={a} b={b}"); // a is used after the mutation
 }
@@ -437,14 +440,15 @@ fn main() {
                many     |   one
   shared &T  ✓ ✓ ✓ ✓    |   ✗
   mutable &mut T        |   ✓
-        (a reversed/write lock, at compile time — but always correct.)
+        (a read/write lock, at compile time — but always correct.)
 ```
 
-::: exercise id="borrow-quiz" kind="mcq" concepts="borrowing" difficulty="2" options="Yes — shared borrows stack|No — a mutable borrow must be exclusive|Only once|Yes but only on the same line" answer="1" explain="Rust allows many `&` readers or exactly one `&mut` writer at a time, never both. While a shared `&Vec<T>` is still used later, the borrow checker rejects a `&mut` to the same vector (E0502)."
-Can you hold a `&mut Vec<T>` while a shared `&Vec<T>` is still in scope?
+::: exercise id="borrow-quiz" kind="mcq" concepts="borrowing" difficulty="2" options="No: a `&mut` must be the only live borrow|Yes: borrows of one Vec can always stack|Yes, if the `&mut` is taken before the `&`|Yes, inside an `unsafe` block" answer="0" explain="Rust allows many `&` readers or exactly one `&mut` writer at a time, never both. While a shared `&Vec<T>` is still going to be read, the borrow checker rejects a `&mut` to the same vector (E0502). Only shared borrows stack. The order doesn't matter: a live `&mut` blocks a later `&` just the same. And `unsafe` doesn't switch the borrow checker off for references; it only unlocks things like raw pointers."
+Can you take and use a `&mut Vec<T>` while a shared `&Vec<T>` to the same vector is
+still going to be read later?
 :::
 
-::: exercise id="borrow-quiz" level="++" kind="mcq" concepts="borrowing,lifetimes" difficulty="3" options="It compiles: the shared borrow ends at its last use, before the push|E0502: first is still in scope when push needs a mutable borrow|It compiles only because i32 is Copy|It compiles, but first now dangles after the push" answer="0" explain="Borrows end at their *last use*, not at the end of the block (non-lexical lifetimes). `first` is last used in the first `println!`, so by the time `push` takes `&mut v` no shared borrow is alive. Move that `println!` below the push and you get E0502. `Copy` is irrelevant, because `first` is a `&i32`, a reference into the Vec."
+::: exercise id="borrow-quiz" level="++" kind="mcq" concepts="borrowing,lifetimes" difficulty="3" options="Compiles, prints `1` then `[1, 2, 3]`|E0502 at `v.push(3)`: `first` is still in scope|E0502 at the last `println!`: `push` still holds `&mut v`|Compiles, but `first` dangles after the push" answer="0" explain="Borrows end at their *last use*, not at the end of the block (non-lexical lifetimes). `first` is last used in the first `println!`, so by the time `push` takes `&mut v` no shared borrow is alive, even though `first` is still in scope. Move that `println!` below the push and you do get E0502. The `&mut v` that `push` takes ends when the call returns, so the last `println!` is free to borrow `v` again. And safe Rust never lets a reference dangle: if `first` were used after the push, the code wouldn't compile at all."
 ```rust
 fn main() {
     let mut v = vec![1, 2];
@@ -454,10 +458,10 @@ fn main() {
     println!("{:?}", v);
 }
 ```
-What does the compiler say?
+What happens when you build and run it?
 :::
 
-::: exercise id="borrow-quiz" level="+++" kind="mcq" concepts="borrowing,lifetimes" difficulty="4" options="The first compiles and the second is E0502|Both compile|Both are E0502|The first is E0502 and the second compiles" answer="0" explain="`v.push(v.len())` works thanks to *two-phase borrows*. The `&mut v` for the method call is only reserved while the arguments are evaluated, so the shared `v.len()` finishes first. In the second, `last` is a shared borrow that is still used after `push` would need `&mut v`, so the borrow checker rejects it (E0502). The fix is to copy the value with `*v.last().unwrap()`."
+::: exercise id="borrow-quiz" level="+++" kind="mcq" concepts="borrowing,lifetimes" difficulty="4" options="A compiles; B is E0502|A is E0502; B compiles|A compiles; B compiles|A is E0499; B is E0502" answer="0" explain="`v.push(v.len())` in A works thanks to *two-phase borrows*. The `&mut v` for the method call is only reserved while the arguments are evaluated, so the shared `v.len()` finishes before the mutable borrow is activated, and A compiles (it isn't E0502, and there is only one `&mut`, so it isn't E0499 either). In B, `last` is a shared borrow into `w` that is still used by the `println!` after `push` needs `&mut w`, so non-lexical lifetimes can't end it early and the borrow checker rejects it (E0502). The fix is to copy the value out first, `let last = *w.last().unwrap();`."
 ```rust
 // A
 let mut v = vec![1usize];
@@ -469,7 +473,7 @@ let last = w.last().unwrap();
 w.push(*last);
 println!("{last}");
 ```
-Which statement is right?
+How does the compiler treat snippets A and B?
 :::
 
 ::: only level="++"

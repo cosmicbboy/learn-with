@@ -70,12 +70,12 @@ One mental shift vs. Python: Rust **compiles before it runs**. There's no intera
 `python -i` where typos slide by — the compiler is strict and dramatic, and that's a
 feature. Errors you learn here are the *main* thing you'll read while Splunking.
 
-::: exercise id="workspace-verbs" kind="mcq" concepts="cargo" difficulty="1" options="It compiles and runs the binary|It only checks types without running|It fetches dependencies|It runs the test suite" answer="0" explain="`cargo run` compiles the crate if needed and then executes the binary, which is how you would launch hlock's CLI on a fresh machine. `cargo check` only type-checks, `cargo fetch` only downloads dependencies, and `cargo test` runs the tests."
+::: exercise id="workspace-verbs" kind="mcq" concepts="cargo" difficulty="1" options="`cargo run`|`cargo build`|`cargo check`|`cargo test`" answer="0" explain="`cargo run` compiles the crate if it needs to and then executes the binary, which is exactly build-then-execute. `cargo build` stops after compiling, leaving the binary in `target/` without running it. `cargo check` only type-checks and produces no binary at all. `cargo test` builds and runs the test suite, not the program."
 Which command would you use, as a Splunker, to *build and then execute* hlock's CLI
 binary on a new machine?
 :::
 
-::: exercise id="workspace-verbs" kind="mcq" level="+" concepts="cargo" difficulty="2" options="cargo test -p harness-lock-core|cargo test harness-lock-core|cargo run --bin harness-lock-core|cd crates and run cargo test" answer="0" explain="In a workspace, `-p <crate>` (short for `--package`) picks one member crate. `cargo test harness-lock-core` still builds and tests the whole workspace and only filters test *names* by that string. `--bin` selects a binary target to run, not a crate to test, and `crates/` is not itself a crate, so cargo there just finds the workspace root again."
+::: exercise id="workspace-verbs" kind="mcq" level="+" concepts="cargo" difficulty="2" options="`cargo test -p harness-lock-core`|`cargo test harness-lock-core`|`cargo run --bin harness-lock-core`|`cd crates && cargo test`" answer="0" explain="In a workspace, `-p <crate>` (short for `--package`) picks one member crate, so only `harness-lock-core` is built and tested. `cargo test harness-lock-core` still builds and tests every member, because a bare argument filters test *names*, not crates. `cargo run --bin` picks a binary target and runs it, so no tests run at all. `crates/` has no `Cargo.toml` of its own, so cargo walks up to the workspace root and tests every member again."
 You're working only on the brains of hlock and want to run the tests of the
 `crates/harness-lock-core` member, and only that member, from the workspace root. Which command
 does it?
@@ -146,28 +146,33 @@ fn main() {
 ```
 :::
 
-::: exercise id="hello-hlock" kind="code" level="+" concepts="expression" difficulty="2" check="exact:hello from hlock (4 crates)" hints="`format!` takes the same template syntax as `println!` but returns a `String` instead of printing|Inline the tool name as `{tool}` and use an empty `{}` with `members.len()` as the argument after the template|`let greeting = format!(...)` with the template `hello from {tool} ({} crates)` and `members.len()`"
-No hard-coded greeting this time. Build `greeting` with `format!`, taking the tool name from
-`tool` and the crate count from `members.len()`, so the line stays right when the workspace
-grows a fifth crate. Expected output: `hello from hlock (4 crates)`.
+::: exercise id="hello-hlock" kind="code" level="+" concepts="expression" difficulty="2" check="exact:hello from hlock (4 crates) / hello from pi (2 crates)" hints="`format!` takes the same template syntax as `println!` but returns a `String` instead of printing|Inline the tool name as `{tool}` and use an empty `{}` with `members.len()` as the argument after the template|The whole body is `format!(...)` with the template `hello from {tool} ({} crates)` and `members.len()`, and no semicolon"
+No hard-coded greeting this time. Finish `greeting` with `format!`, taking the tool name from
+`tool` and the crate count from `members.len()`. `main` calls it for two different workspaces,
+so typing the `4` yourself won't work. Expected output:
+`hello from hlock (4 crates) / hello from pi (2 crates)`.
 
 ```rust
+fn greeting(tool: &str, members: &[&str]) -> String {
+    // TODO: build the greeting from `tool` and `members.len()`
+    todo!("format! the greeting")
+}
+
 fn main() {
-    let tool = "hlock";
     let members = ["crates/harness-lock-core", "crates/harness-lock-py", "crates/harness-lock", "crates/hlock"];
-    // TODO: build the greeting from `tool` and `members.len()`, don't type the 4 yourself
-    let greeting: String = todo!("format! the greeting");
-    println!("{greeting}");
+    println!("{} / {}", greeting("hlock", &members), greeting("pi", &members[..2]));
 }
 ```
 
 <solution>
 ```rust
+fn greeting(tool: &str, members: &[&str]) -> String {
+    format!("hello from {tool} ({} crates)", members.len())
+}
+
 fn main() {
-    let tool = "hlock";
     let members = ["crates/harness-lock-core", "crates/harness-lock-py", "crates/harness-lock", "crates/hlock"];
-    let greeting = format!("hello from {tool} ({} crates)", members.len());
-    println!("{greeting}");
+    println!("{} / {}", greeting("hlock", &members), greeting("pi", &members[..2]));
 }
 ```
 :::

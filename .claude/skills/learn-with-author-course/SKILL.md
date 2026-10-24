@@ -132,6 +132,44 @@ fn brand() -> String {
   renders above the question.
 - Wrong options should be *plausible misconceptions* (e.g. "it copies, like Python"),
   not jokes.
+- **The options must answer the question that was asked.** If the stem says "Which
+  command…", every option is a command (`` `cargo run` ``); "Which line…" means every
+  option is a line; "What happens…" means every option is an outcome. The first course
+  shipped "Which command would you use…?" with the options "It compiles and runs the
+  binary", "It fetches dependencies" and so on. Those are descriptions, so the learner
+  had to work out which command each one meant.
+- **Keep the options parallel.** Use the same grammatical form and similar length, so
+  the longest or most specific option isn't obviously the right one. Don't open every
+  option with "It…": make the subject the thing being asked about, or rewrite the stem
+  so the options can be short answers.
+- **Don't spell out the answer in the option.** "`cargo run` (compiles, then runs)"
+  answers "which command builds and runs?" by matching words, not by understanding.
+  What each option does belongs in `explain=`, which should say why the right answer is
+  right *and* why each tempting wrong one is wrong.
+- **Exactly one defensible answer.** Avoid "Both"/"Neither"/"All of the above" unless
+  that really is the point. Check `answer=` against `explain=`; the first course shipped
+  a quiz whose marked answer contradicted its own explanation.
+- **The stem stands alone.** It names what it's about and shows any code it asks about.
+  It doesn't lean on "above", or on another card ("A subtler one…"). A deeper variant
+  may replace that card, so the learner may never see it. And the stem doesn't contain
+  the answer, not even in a parenthetical like "(notice the `!`)" or "(a number *is*
+  present)". Watch the prose right before the card too: a heading or sentence that
+  states the answer ("rustc complains: non-exhaustive patterns") spoils it.
+- **Options state outcomes; reasons go in `explain=`.** An option like "X, because Y"
+  next to bare distractors is the longest and best-explained one, so it gives itself
+  away.
+- **Ask "What happens when you build and run it?"** rather than "What does the compiler
+  say?". The latter forces "It compiles…" phrasing when the answer is that it compiles.
+  Good outcome options look like "Prints `5 3`", "E0502 at the `push`", or "Hangs:
+  `rx.iter()` never ends".
+- **Backtick code in options** (`` `cargo run` ``, `` `.iter()` ``, `` `Some(3)` ``). Double
+  quotes can't go in attributes, so show a concrete output as a backticked fragment
+  rather than describing it in prose.
+- **Distractors are real misconceptions,** such as the Python habit (returning a bare `3`
+  where `Some(3)` is needed) or a neighbouring command. "A Dockerfile", "It panics" and
+  `.new()` are jokes, and jokes don't test anything.
+- **Name lines by their content** ("the `let total` line"), not by position ("the last
+  line"), because positions drift when the code changes.
 
 ### Predict (`kind="predict"`)
 
@@ -140,6 +178,93 @@ block is the answer. Matching ignores case and collapses whitespace. **The answe
 be visible in the prose or code right above it.** The first course asked learners to count
 workspace members right under a code block listing them. A good predict asks what a
 program prints, or which line errors.
+
+- **Verify the expected answer by running the code.** Paste the snippet through the
+  runner (`node bin/learn-with.js run courses/<id> --code -`); a hand-computed
+  "expected" is a common source of wrong answers.
+- **Say exactly what to type.** "Predict the output" for a multi-line program needs a
+  stated format (e.g. "the single line it prints"), because matching only ignores case
+  and whitespace runs.
+
+### Checks that actually grade the goal
+
+These are the code-exercise mistakes the first full review found most often:
+
+- **Defeat hard-coding.** If the goal says "compute X from Y", a single-input
+  `exact:` check also passes a hard-coded literal. Call the function on two or more
+  inputs, so only the general solution passes (e.g. `exact:12 42`).
+- **Drive every case the goal names.** Every `todo!()` and TODO in the starter must
+  run on the way to the checked output. If `main` only ever hits one match arm, the
+  `todo!()` left in the other arms is never graded.
+- **Grade one line.** `exact:` can't hold a newline, and `contains:` on one fragment is
+  usually too weak. Make `main` print the graded output on one line (`print!` before
+  the last `println!`, or `.join(" / ")`), then use `exact:`.
+- **Check the distinctive value** the goal names (`contains:nope`), not a generic token
+  that any wrong answer also prints (`contains:Err(`).
+- **A `todo!("…")` message must not contain the check text** (the audit flags this).
+  Otherwise the unfinished starter's panic message satisfies the check.
+- **The goal states the requirement; the hints supply the method.** If the goal says
+  "use `s.clone()` and `&s`", the hints have nothing left to give.
+
+### Claims that need checking
+
+- **Error codes, by name.** Lookalikes are easy to confuse:
+  - E0502: a shared and a mutable borrow at once;
+  - E0506: assigning to something that's borrowed;
+  - E0499: two mutable borrows;
+  - E0505: moving out of something that's borrowed;
+  - E0507: moving out of a reference.
+
+  Run the snippet and quote the code rustc actually prints.
+- **Borrow wording after non-lexical lifetimes.** A borrow ends at its last use, not
+  at the end of its scope. Write "is still used later", not "is still in scope".
+- **An explanation's suggested fix must compile.** Run it.
+- **Facts about the real project:** crate names, which `Cargo.toml` opts into what,
+  and dependency features (e.g. `serde_json`'s default `Map` is a `BTreeMap`). Check
+  these against the repo, not from memory.
+- **Persona drift.** Python habits leak into Rust prose: "copying" for a move, or
+  "empty" for moved-from. A moved value is *unusable*, not empty.
+
+### Prose around cards at different depths
+
+- A note written for the base card ("prints `double(3) = 6`") stays visible at every
+  depth and contradicts the variant shown there. Gate it with `::: only until="0"`.
+- Depth-3 framing ("no hints, no solution") must match the cards' own `hints=` and
+  solution.
+- Notes meant for authors ("When authoring, keep…") never go in lesson prose.
+
+### Reviewing assessments (do this before shipping)
+
+Read every card the way a learner meets it, in page order, and check:
+
+1. **Mcq:** does each option answer the stem's question type? Are the options parallel,
+   is exactly one right, and is `answer=` right?
+2. **Explanations:** does `explain=` teach why the answer is right and why the
+   distractors are wrong?
+3. **Predict:** does the expected answer match a real run, is it not given away by the
+   prose above, and is the format to type unambiguous?
+4. **Code exercise:**
+   - The goal says exactly what to change and what output to expect.
+   - The starter matches the goal (names, `TODO`s, `todo!()` placement).
+   - The check would fail for a plausible wrong solution and pass for any correct one.
+     It shouldn't depend on incidental formatting the goal never mentioned.
+   - The hints go from gentlest to nearly the answer, and none of them is wrong.
+   - The solution is idiomatic and is what the goal asked for.
+5. **Rust claims:** are the claims in the prose, explanations and hints true? Check
+   error codes and "this compiles" or "this fails" statements with real rustc.
+6. **Fit:** is the card's difficulty right for where it sits, and does it test the
+   concept it's tagged with?
+
+The audit (`scripts/audit-course.js`) catches the mechanical part:
+- quiz options that don't match a "which X" stem;
+- "It…" option lists;
+- length giveaways, and lone "because" reasons;
+- Both/Neither options;
+- stems that lean on another card;
+- `todo!` messages that leak the check text.
+
+`npm test` fails on any of these. The rest takes a human read. In the first course's
+full review, 52 of 144 cards needed a fix even though the course was green.
 
 ## Iterations: each one built from how the last went
 

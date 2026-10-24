@@ -41,9 +41,10 @@ The line `#[derive(Debug, Clone, Serialize, Deserialize, Default)]` is Rust sayi
 | `Deserialize` | from JSON/TOML | `json.loads` / schema parsing |
 | `Default` | a zero-ish default | a default constructor |
 
-These are **traits** (interfaces) that the compiler implements *for* you. The `!` in
-`println!`, `derive`, and `macro_rules!` are all macros; `#[derive(...)]` is a
-*derived macro* — code that writes code.
+These are **traits** (interfaces) that the compiler implements *for* you. Two kinds
+of macro show up here: `println!` and `vec!` are *function-like* macros (the `!` is the
+tell), and `#[derive(...)]` runs *derive macros*, code that writes the trait impls for
+you.
 
 ::: callout type="contrast" lang="python"
 **For the Pythonista.** `#[derive(Debug, Clone)]` ≈ `@dataclass` plus free
@@ -73,9 +74,11 @@ you'll meet `Option<T>` and have to unwrap it safely. We'll practice the safe wa
 Let's make one that mirrors hlock's style — a struct describing a skill you'd lock in
 `harness.lock`.
 
-::: exercise id="struct-derives" kind="code" concepts="structs,derives" difficulty="2" check="contains:borrowing" hints="Run it: rustc says `Skill` doesn't implement `Debug` (and then `Clone`)|Derives go on the line directly above the `struct` keyword|Add `#[derive(Debug, Clone)]` right above `struct Skill`"
-Define a `Skill` struct with fields `name: String` and `level: u8`, derive
-`Debug` and `Clone`, and make it print in `main`.
+::: exercise id="struct-derives" kind="code" concepts="structs,derives" difficulty="2" check="contains:level: 3 }" hints="Run it: rustc says `Skill` doesn't implement `Debug` (and then `Clone`)|Derives go on the line directly above the `struct` keyword|Add `#[derive(Debug, Clone)]` right above `struct Skill`"
+The `Skill` struct (fields `name: String` and `level: u8`) and `main` are written, but this
+won't compile: `main` prints `s` with `{:?}` and calls `s.clone()`, and `Skill` doesn't have
+either trait yet. Add the derive line so it compiles and prints `s` in Debug form, then the
+clone's name. The first line of output is `Skill { name: "borrowing", level: 3 }`.
 
 ```rust
 // TODO: declare the struct with #[derive(Debug, Clone)]
@@ -497,9 +500,15 @@ Because `Budget.max_spend_usd` is `Option<f64>`, hlock has to consciously decide
 do when it's `None`. You, reading that code, get an *enforced honesty*: every place a
 field is read, the author had to say what "missing" means. That's `Option` doing its job.
 
-::: exercise id="option-quiz" kind="mcq" concepts="result_option" difficulty="2" options="Some(value)|None|Ok(value)|Err(error)" answer="0" explain="`Option<T>` is either `Some(value)` when a value is present or `None` when it is absent. Since there is a trial count to report, the function returns `Some(count)`. `Ok` and `Err` belong to `Result`."
-A function returns `Option<i32>` for "how many trials have run." What value does it
-return when trials are still running (a number *is* present)?
+::: exercise id="option-quiz" kind="mcq" concepts="result_option" difficulty="2" options="`Some(3)`|`None`|`Ok(3)`|`3`" answer="0" explain="`Option<T>` is either `Some(value)` when a value is present or `None` when it is absent. Three trials have finished, so there is a count to report and the function returns `Some(3)`. `None` would mean the search hasn't started. `Ok` is a variant of `Result`, not `Option`, so `Ok(3)` is a type error here. A bare `3` is a `usize`, and Rust never wraps it in `Some` for you, so returning it fails with E0308 mismatched types."
+`trials_run` returns how many trials of a search have finished, or nothing if the search
+hasn't started:
+
+```rust
+fn trials_run(&self) -> Option<usize>
+```
+
+Three trials have finished. What does `trials_run` return?
 :::
 
 ::: exercise id="option-quiz" kind="mcq" level="+" concepts="result_option" difficulty="3" options="10, 10, 6|10, 0, 6|None, 0, 6|10, then a panic, then 6" answer="0" explain="`filter` turns `Some(0)` into `None` because `0 > 0` is false, `map` does nothing to a `None`, and `unwrap_or(10)` supplies the fallback. So both `None` and `Some(0)` become `10`, and `Some(3)` becomes `Some(6)` and then `6`. Nothing panics, because no step unwraps without a fallback."
@@ -513,6 +522,3 @@ fn trial_cap(max_trials: Option<usize>) -> usize {
 ```
 What do `trial_cap(None)`, `trial_cap(Some(0))` and `trial_cap(Some(3))` return, in order?
 :::
-
-> The quiz above used a concept `option-ish`; in the course model every concept gets a
-> badge. Rust's real term is `Option` — shorthand that Splunkers use too.

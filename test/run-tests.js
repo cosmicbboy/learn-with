@@ -214,6 +214,11 @@ t('every plus-level item is on its level\'s route (otherwise nobody can reach it
     if (e.level) assert(course.levels[e.level].order.includes(`${m.id}/${l.id}`), `${m.id}/${l.id}/${e.id} is depth ${e.level} but the lesson is off that depth's route`);
   }
 });
+t('assessment audit: no quiz whose options miss the question or give the answer away', () => {
+  const out = require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', '.claude', 'skills', 'learn-with-author-course', 'scripts', 'audit-course.js'), 'courses/rust-hlock'], { encoding: 'utf8' });
+  const bad = out.split('\n').filter((l) => /stem asks "which|options all start with "It|length giveaway|Both\/Neither|"because…" reason|stem leans on another card|^ERROR/.test(l));
+  assert.deepStrictEqual(bad, [], bad.join('\n'));
+});
 t('every mcq explains its answer', () => {
   for (const m of course.modules) for (const l of m.lessons) for (const q of [...l.exercises, ...l.quizzes]) {
     if (q.kind === 'mcq') assert(q.explanation, `mcq without explain=: ${m.id}/${q.id}`);
