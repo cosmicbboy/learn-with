@@ -135,6 +135,23 @@ an LLM-backed generator).
 Progress persists per browser (localStorage) and, in dynamic mode, to a small server-side
 JSON store behind `/api/user` — swap that for a KV/DB store in production.
 
+## Skills (captured from this build)
+
+The repo ships a `skills/` family (mirrored to this machine's Pi skills dir so it loads
+as reusable pi skills) that condense the architecture and every hard-won lesson:
+
+- `learn-with` — entry point: mental model, repo layout, two compile targets, routing.
+- `learn-with-author` — course manifest + lesson directives, exercises/checks,
+  intentional-error exercises, parser gotchas.
+- `learn-with-build` — static vs dynamic, rustc runner backends, serverless, cache-buster,
+  the real-rustc verification loop, stale-server recovery.
+- `learn-with-adaptive` — user model, mastery ladder, spaced review, challenge zone, and
+  the on-the-fly agentic practice generator.
+- `learn-with-ui` — markdown renderer (tables, callouts), the code editor overlay +
+  line-number gutter, single-scrollbar rule, light/dark theme, logo.
+
+Keep `skills/` and the loaded pi copies (`~/.pi/agent/skills/learn-with*`) in sync.
+
 ## Roadmap
 - Bundle host `rustc` → WASM into the static `wasm` runner so static mode compiles code
   fully offline (the adapter slot is ready).
