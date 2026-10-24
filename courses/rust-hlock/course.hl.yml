@@ -18,9 +18,19 @@ persona:
   javascript: 4
   r: 2
 defaultDifficulty: 2
-project:
-  repo: https://github.com/unionai-oss/hlock
-  note: A Rust workspace (harness-lock-core + PyO3 bindings) that pins/restores/syncs an agent harness to harness.lock.
+
+# Depth for iterations. Finishing the course offers "Iterate": the next iteration is
+# built from how the learner did, concept by concept, out of these depths. Exercises
+# with `level="+"`/`"++"`/`"+++"` are the deeper variants of the same id. Each depth
+# can set default rules and a lesson route (`order:`); `note` tells the learner why
+# the route changed. See lib/adaptive/iterations.js.
+levels:
+  - level: "++"
+    order: [02-manifest, 03-ownership, 04-errors, 05-enums-match, 06-iterators, 07-traits, 08-modules, 09-concurrency, 10-testing, 11-capstone]
+    note: "the orientation lessons are behind you, so this iteration starts at the manifest."
+  - level: "+++"
+    order: [02-manifest, 04-errors, 05-enums-match, 03-ownership, 06-iterators, 07-traits, 10-testing, 09-concurrency, 08-modules, 11-capstone]
+    note: "lessons now follow hlock's own data flow: parse, fail, match, hash, sort, format, test, share, ship."
 
 modules:
   - id: 00-welcome

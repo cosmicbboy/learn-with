@@ -108,26 +108,62 @@ serverless/
      drives the colour; the adaptive engine can route `base|contrast|deep|remedial`
      layers). `::: notice`, `::: warning`, `::: tip`, `::: info`, … are aliases that
      render as the matching callout tone automatically.
-   - `::: exercise kind="code" concepts="ownership" difficulty="2" check="contains:ok"` →
-     the split-view interactive exercise. The first fenced `rust` block is the starter
+   - `::: exercise kind="code" concepts="ownership" difficulty="2" check="exact:ok" hints="nudge|more specific|nearly the answer"`
+     → the split-view interactive exercise. The first fenced `rust` block is the starter
      code; a second fenced block under a `<solution>` marker (or labeled
-     `rust:solution`) is the solution. `kind` is `code|fill|predict|output|mcq`.
-   - `::: exercise kind="mcq" options="A|B|C" answer="1"` → a check-your-understanding
-     quiz (also writable as `::: quiz`).
+     `rust:solution`) is the solution. `kind` is `code|fill|predict|output|mcq`. Hints are
+     `|`-separated and revealed one at a time. **The starter must compile but fail the
+     check** (use `todo!()`), so the learner goes red → green; `npm test` enforces this.
+   - `::: exercise kind="mcq" options="A|B|C" answer="1" explain="why B is right"` → a
+     check-your-understanding quiz (also writable as `::: quiz`). Options are shuffled
+     stably at render time; a rust block inside is shown above the question.
+   - `::: exercise kind="predict"` with a `` ```text:expected `` block → the learner types a
+     prediction before the answer is revealed.
 
 3. **Run** it with `serve`; each exercise's output check is graded against real stdout.
+   The dev server serves `ui/` live and recompiles the course per request — just reload.
+
+Agents working in this repo get two project skills under `.claude/skills/`:
+`learn-with-author-course` (format + exercise-design rules + `scripts/audit-course.js`)
+and `learn-with-ux-review` (a browser walk-through checklist for the interface).
+
+## Iterations: the course rebuilds itself from how you did
+
+Work through the course once. When you've finished it, an **Iterate** button appears at
+the top. Iterating builds **iteration 2** from your own results: what you got first
+try, what took several runs, where you used hints or opened the solution. The header
+then shows **‹ Iteration 2/2 ›**, and you can step back to 1/2 any time. Finish 2/2 and
+Iterate again for 3/3.
+
+Per concept, the next iteration:
+- **Goes deeper** where you were strong: harder variants, real-codebase-shaped
+  problems, then spec-only builds.
+- **Revisits with every hint** where it was hard. After two hard rounds it still steps
+  one deeper, fully supported.
+- **Reorders or skips** lessons: the intro modules drop away, deep iterations follow
+  hlock's data-flow order, mastered lessons with nothing new are skipped, and a weak
+  concept's lesson comes back for review.
+
+Home explains how each iteration was built, and each lesson says why it's there.
+
+Authoring: a `::: exercise` with the same `id` plus `level="+"`/`"++"`/`"+++"` is a
+deeper variant (depth 1–3). `levels[].order` and `note` in `course.hl.yml` give the
+route for deep iterations, and `::: only level="++"` gates deeper prose. Preview a
+depth with `?depth=++`. The engine is `lib/adaptive/iterations.js`, which plans the
+next iteration, and `levels.js`, which resolves variants.
 
 ## How the adaptation works
 
 There's a **light/dark theme toggle** in the header (persisted in `localStorage`, and it
-respects your OS `prefers-color-scheme` by default).
+respects your OS `prefers-color-scheme` by default). Editor drafts autosave per exercise;
+⌘/Ctrl+Enter runs, Reset restores the starter.
 
 The **rules engine** (pure JS, ships to the browser) keeps a per-concept user model:
 every correct/incorrect answer and hint moves a concept up/down a mastery ladder
 `unknown → learning → practiced → mastered`, with a forgetting-curve that schedules
 spaced review and re-surfaces weak concepts. It chooses the explanation layer, the
 difficulty ("challenge zone"), and the next item. The **agentic layer** runs server-side
-in dynamic mode: if you're stuck, "✨ Generate more practice" calls `/api/adapt` to
+in dynamic mode: after a second miss, "✨ More practice on this" calls `/api/adapt` to
 fabricate a fresh exercise scoped to the concept + your profile (a dependency-free
 synthetic generator by default; set `LEARN_WITH_AGENT_URL` / `LEARN_WITH_AGENT_KEY` for
 an LLM-backed generator).

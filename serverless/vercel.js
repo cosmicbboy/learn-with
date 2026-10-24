@@ -21,6 +21,7 @@ const app = createApp(courseDir, {
   backend: process.env.LEARN_WITH_BACKEND || 'dist',
   distDir: path.join(__dirname, '..', 'dist'),
   uiDir: path.join(__dirname, '..', 'ui'),
+  live: false, // compile once per cold start
 });
 
 module.exports = app;

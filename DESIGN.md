@@ -248,7 +248,50 @@ material the moment they struggle.
 
 ---
 
-## 5. Roadmap / open work
+## 5. Iterations: the next run is built from the last one
+
+Mastery learning rewards coming back to familiar material, but a fixed "hard mode" ignores
+what the learner actually showed. So a finished course offers **Iterate**, which builds
+the next iteration from the learner's own outcomes. Iterations accumulate (1/2, 2/2,
+3/3, …), and every earlier one stays available to revisit, unchanged.
+
+**Evidence.** Each item records attempts, misses, hints, solution opened, and first-try
+success for the iteration it was done in. A concept's score is the mean of its items'
+scores: first try = 1; solution = 0.25; otherwise 0.85 minus 0.15 per miss and 0.15 for
+hints, floored at 0.4.
+
+**Decisions per concept:**
+
+| class | depth next time | support |
+|---|---|---|
+| strong ≥ .85 | +1 (+2 if every item first try) | that depth's rules |
+| solid ≥ .5 | +1 | 2 hints, solution |
+| weak | same (+1 after two weak rounds) | all hints, solution, analogies |
+
+**Decisions per lesson:**
+- Each exercise slot shows the deepest authored variant at or below its concepts'
+  depth.
+- Lessons follow the authored route for the iteration's mean depth.
+- A lesson is skipped when all its concepts are strong and nothing in it is new.
+- A dropped lesson returns first when it's a weak concept's only home.
+
+**Design decisions:**
+- **Frozen plans.** A plan is computed once, on Iterate, so later course edits or
+  progress don't rewrite history.
+- **Explained adaptation.** Home summarizes the changes, and each lesson states its
+  reason with the evidence.
+- **Earned, not advertised.** Nothing about iterations shows until the first is
+  finished.
+- **Compatibility.** Iteration 1's progress keys are the original ones, so old saves
+  still count. Later iterations use their own keys.
+- **Weighted evidence.** A correct answer on a deeper variant is stronger evidence of
+  mastery (×1.5 per depth).
+
+Iteration 1 stays fully authored. A natural next step is to let the agentic layer
+(§3.5) generate fresh items for weak concepts, instead of only drawing from the
+authored depth variants.
+
+## 6. Roadmap / open work
 - WASM rustc backend: compile host `rustc` to wasm and substitute into the
   static `wasm` runner (heavy ~100MB; the interface is ready, adapter stubbed).
 - Cloudflare/Vercel adapter for the dynamic server (routing isolation of

@@ -19,7 +19,7 @@ async function main() {
         if (e.check && e.check.mode !== 'none') {
           const actual = (r.stdout || '') + (r.stderr || '');
           if (e.check.mode === 'exact') verdict = (r.stdout || '').trim() === e.check.value.trim() ? 'PASS' : 'FAIL';
-          else if (e.check.mode === 'contains') verdict = actual.includes(e.check.value) ? 'PASS' : 'FAIL';
+          else if (e.check.mode === 'contains') verdict = (r.stdout || '').includes(e.check.value) ? 'PASS' : 'FAIL';
           else if (e.check.mode === 'auto') verdict = (r.stdout || '').trim() === (e.expected || '').trim() ? 'PASS' : 'FAIL';
         } else {
           verdict = r.ok || r.phase === 'interactive' ? 'runs' : 'RUN-ERR';

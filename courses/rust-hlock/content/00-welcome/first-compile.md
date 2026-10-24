@@ -51,7 +51,7 @@ later).
 
 Now let's make you actually hit a borrow error, because that's your Splunking destiny.
 
-::: exercise id="moved-value" kind="code" concepts="ownership,expression" difficulty="2"
+::: exercise id="moved-value" kind="code" concepts="ownership,expression" difficulty="2" hints="Read the error: it points at the line where `s` moved and the later line that still uses it|`let consumer = s;` hands ownership of the `String` to `consumer`, so `s` is empty after that line|Either print `s` before the move, or write `let consumer = &s;` so `consumer` only borrows it"
 This program won't compile — it's a `E0382 borrow of moved value`. Run it and read the
 error. Then fix it by using a *reference* (`&s`) in place of copying, OR by reordering so
 you print before the move. Either way it must print `made for rust`.
@@ -76,6 +76,39 @@ fn main() {
 ```
 :::
 
+::: exercise id="moved-value" kind="code" level="+" concepts="ownership,string_vs_str" difficulty="3" check="exact:made for rust, loud: RUST" hints="Try the obvious `let loud = shout(s);` first and read the E0382 it causes: the move now happens at a function call|A function that only needs to *read* text can take `&str` and leave ownership with the caller|Change the parameter to `s: &str`, then call `shout(&s)`"
+This time the move hides inside a function call. `shout` takes its argument *by value*, so
+calling `shout(s)` hands `s` away and the final `println!` can't use it any more. Fix it
+**without `.clone()`**: change `shout` so it only borrows, then fill in the `todo!()`.
+Expected output: `made for rust, loud: RUST`.
+
+```rust
+fn shout(s: String) -> String {
+    s.to_uppercase()
+}
+
+fn main() {
+    let s = String::from("rust");
+    // TODO: get a loud version of s from shout, and keep s usable on the next line
+    let loud: String = todo!("call shout");
+    println!("made for {s}, loud: {loud}");
+}
+```
+
+<solution>
+```rust
+fn shout(s: &str) -> String {
+    s.to_uppercase()
+}
+
+fn main() {
+    let s = String::from("rust");
+    let loud = shout(&s);
+    println!("made for {s}, loud: {loud}");
+}
+```
+:::
+
 > That `String::from("rust")` is worth pausing on. `"rust"` is a *string literal* (a
 > `&str`); `String` is an *owned, growable* string. `String::from(...)` converts one to
 > the other. This `String` vs `&str` split has *no* exact Python analogue — it's the
@@ -88,14 +121,15 @@ Here's a founder-level Rust idea, visible as early as our little programs: in Ru
 everything is an **expression** that yields a value, and a function returns the last
 expression *without* a `return` keyword:
 
-::: exercise id="func-expression" kind="output" concepts="expression" difficulty="2" check="exact:12"
-Fill in the body so `double(6)` returns `12`. **Notice there's no `return`** — the last
+::: exercise id="func-expression" kind="output" concepts="expression" difficulty="2" check="exact:12" hints="A function body's last expression, with no semicolon, is its return value|To double `n`, multiply it by 2|The body is just `n * 2`, with no `return` and no `;`"
+Fill in the body so `double(6)` returns `12`. **Don't use `return`**: the last
 expression (with no semicolon) is the return value. A `;` would turn the expression into
-a *statement* that returns `()`, so dropping the semicolon is the whole trick.
+a *statement* that returns `()`, so leaving off the semicolon is the whole trick. Expected
+output: `12`.
 
 ```rust
 fn double(n: i32) -> i32 {
-    n * 2   // <-- no semicolon = this is the return value
+    todo!() // TODO: return n doubled, as the last expression with no semicolon
 }
 
 fn main() {
@@ -115,6 +149,39 @@ fn main() {
 ```
 :::
 
+::: exercise id="func-expression" kind="output" level="+" concepts="expression" difficulty="3" check="exact:0 42 100" hints="`if` is an expression in Rust: each branch is a block whose last expression is its value|Chain `if n < 0 { ... } else if n > 100 { ... } else { ... }` as the whole function body, with no semicolons inside the branches|The three branch values are `0`, `100` and `n`"
+Write `clamp_trials` so a trial count below 0 becomes `0`, one above 100 becomes `100`, and
+anything else passes through. The rule: **no `return`, no `let`, and no `.clamp()`**. The
+whole body is one `if` / `else if` / `else` expression. Expected output: `0 42 100`.
+
+```rust
+fn clamp_trials(n: i32) -> i32 {
+    todo!() // TODO: one if/else-if/else expression, and it is the return value
+}
+
+fn main() {
+    println!("{} {} {}", clamp_trials(-5), clamp_trials(42), clamp_trials(500));
+}
+```
+
+<solution>
+```rust
+fn clamp_trials(n: i32) -> i32 {
+    if n < 0 {
+        0
+    } else if n > 100 {
+        100
+    } else {
+        n
+    }
+}
+
+fn main() {
+    println!("{} {} {}", clamp_trials(-5), clamp_trials(42), clamp_trials(500));
+}
+```
+:::
+
 ::: callout type="contrast" lang="python"
 **For the Pythonista.** You write `def double(n): return n * 2`. In Rust, the "implicit
 return" is idiomatic. Watch that you don't slap a `;` after `n * 2` — that's the single
@@ -124,11 +191,24 @@ with a "mismatched types" error that's worth reading carefully).
 
 ## Quick self-check
 
-::: exercise id="expr-quiz" kind="mcq" concepts="expression" difficulty="1" options="n + 1 IS the return value (no semicolon)|A semicolon turns it into a statement returning ()|Both are valid and equivalent|Rust requires an explicit return keyword" answer="2"
+::: exercise id="expr-quiz" kind="mcq" concepts="expression" difficulty="1" options="n + 1 IS the return value (no semicolon)|A semicolon turns it into a statement returning ()|Both are valid and equivalent|Rust requires an explicit return keyword" answer="1" explain="The trailing `;` turns `n + 1` into a statement, so the body evaluates to `()` instead of `i32` and rustc reports mismatched types. Delete the semicolon and `n + 1` becomes the return value."
 ```rust
 fn inc(n: i32) -> i32 {
     n + 1;
 }
 ```
 Why does this function fail to compile?
+:::
+
+::: exercise id="expr-quiz" kind="mcq" level="+" concepts="expression" difficulty="2" options="() because the block's last line ends in a semicolon|6 because y * 2 is the last thing in the block|3 because y is the last binding in the block|Nothing: a block can't be assigned to a variable" answer="0" explain="A `{ ... }` block is an expression whose value is its final expression. Here the final line `y * 2;` ends in a semicolon, which makes it a statement, so the block evaluates to `()` and `x: ()`. Remove that semicolon and `x` would be `6`."
+```rust
+fn main() {
+    let x = {
+        let y = 3;
+        y * 2;
+    };
+    println!("{:?}", x);
+}
+```
+What is the value of `x`?
 :::

@@ -6,37 +6,43 @@
   <title>learn-with</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <!-- Apply the saved/OS theme before first paint so there's no light→dark flash. -->
+  <script>try { var t = localStorage.getItem('learnwith.theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); document.documentElement.setAttribute('data-theme', t); } catch (_) {}</script>
   <!-- The static build bakes {mode:'static'} here; dynamic mode detects /api/health. -->
   <script>window.__LEARN_WITH__ = /*__LEARN_WITH_MODE__*/ null;</script>
 </head>
 <body>
+  <a class="skip" href="#root">Skip to content</a>
   <div class="app">
     <header class="top">
-      <a href="#" class="brand" id="brandHome" title="Back to home" aria-label="learn·with home"><img class="brand-logo" src="logo.svg" alt="" width="28" height="28" /> <span>learn<span class="dot">·</span>with</span> <span id="courseShort" class="mono"></span></a>
+      <a href="#" class="brand" id="brandHome" title="Back to course home" aria-label="learn·with — course home"><img class="brand-logo" src="logo.svg" alt="" width="28" height="28" /> <span>learn<span class="dot">·</span>with</span></a>
+      <span id="courseShort" class="course-short"></span>
       <span class="modebadge" id="modeBadge">…</span>
-      <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode" aria-label="Toggle light or dark theme">🌙</button>
+      <div class="iternav" id="iterNav" hidden role="group" aria-label="Iterations">
+        <button type="button" id="iterPrev" aria-label="Previous iteration">‹</button>
+        <span id="iterLabel" aria-live="polite"></span>
+        <button type="button" id="iterNext" aria-label="Next iteration">›</button>
+      </div>
+      <button type="button" class="btn primary small iterate-btn" id="iterateBtn" hidden title="Build your next iteration from how this one went">Iterate →</button>
       <div class="progress-wrap">
         <span id="progressPct"></span>
         <progress class="prog" id="progressBar" max="100" value="0"></progress>
       </div>
+      <button type="button" class="theme-toggle" id="themeToggle" title="Toggle light/dark mode" aria-label="Toggle light or dark theme">🌙</button>
     </header>
 
-    <main id="root"><div class="container" id="mount"></div></main>
+    <main id="root" tabindex="-1"><div class="container" id="mount"><p class="loading">Loading course…</p></div></main>
 
     <footer class="footer">
-      <div class="container" style="padding:0">
+      <div class="container">
         <span>learn-with</span> · declarative adaptive courses that compile to static or dynamic, and really run code.
-        <span class="mastery-legend" style="float:right">
-          <span><span style="background:var(--mastery-unknown)"></span>unknown</span>
-          <span><span style="background:var(--mastery-learning)"></span>learning</span>
-          <span><span style="background:var(--mastery-practiced)"></span>practiced</span>
-          <span><span style="background:var(--mastery-mastered)"></span>mastered</span>
-        </span>
       </div>
     </footer>
   </div>
   <script src="wasm-runner.js"></script>
   <script src="adaptive.js"></script>
+  <script src="levels.js"></script>
+  <script src="iterations.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
