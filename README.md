@@ -55,8 +55,24 @@ compiler is the teacher).
 ## Build the static site
 
 ```bash
-npm run build                 # writes a self-contained ./dist
-npx serve dist                # or any static host
+npm run build                 # writes a self-contained ./dist (single course)
+```
+
+### Multi-course hub → GitHub Pages
+
+`npm run build:site` (`node bin/learn-with.js site [--out site]`) compiles **every
+course** under `courses/` into one deployable root: `index.html` is a pretty hub that
+lists all courses, `courses.json` is the catalog it renders, and each course gets its
+own self-contained folder (`site/<course-id>/`) that the hub links to.
+
+A workflow at `.github/workflows/deploy.yml` builds this and publishes it to GitHub
+Pages automatically on push to `main`. One-time setup: repo **Settings → Pages →
+Source → “GitHub Actions”**, then push. Everything uses relative paths, so it works
+under a project subpath (`https://<user>.github.io/<repo>/`).
+
+```bash
+npm run build:site            # compile all courses → ./site (hub + one folder per course)
+npx serve site                # preview locally
 ```
 
 ## Commands
@@ -64,6 +80,7 @@ npx serve dist                # or any static host
 | command | what it does |
 |---|---|
 | `npm run build` | compile `courses/rust-hlock` → `dist/` (static) |
+| `npm run build:site` | compile all courses → `site/` (hub + one folder per course; GitHub Pages ready) |
 | `npm run serve` | build + dynamic server with live rustc |
 | `npm test` | validate course + run every exercise/solution through real rustc + adaptive tests |
 | `node bin/learn-with.js compile courses/rust-hlock` | validate & summarize a course |
@@ -76,6 +93,7 @@ lib/
   content.js        lesson .md + `::: directive` parser
   compile.js        course source -> course.json manifest
   emit-static.js    static emitter (dist/)
+  build-site.js     multi-course hub builder (site/ = index.html + one folder per course)
   server.js         Express app: UI + /api/course /api/run /api/adapt /api/user
   model.js          schema + validation
   adaptive/
@@ -87,6 +105,7 @@ lib/
     index.js        runner registry + output checks
 ui/
   index.html        app shell (mode-agnostic)
+  home.html         course-hub page for the multi-course site (site/index.html)
   app.js            SPA: syllabus, split-view editor, mastery, adapt, agent
   styles.css        Codecademy/Khan-inspired styling
   wasm-runner.js    static-mode runner (predict/mcq + WASM-rustc slot)

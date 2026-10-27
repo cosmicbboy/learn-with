@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "node bin/learn-with.js build courses/rust-hlock",
+    "build:site": "node bin/learn-with.js site",
     "serve": "node bin/learn-with.js serve courses/rust-hlock",
     "test": "node test/run-tests.js"
   },
