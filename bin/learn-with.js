@@ -20,6 +20,19 @@ function has(argv, name) { return argv.includes(name); }
 
 async function main(argv) {
   const cmd = argv[0];
+
+  // `site` builds every course under courses/ — no single courseDir argument.
+  if (cmd === 'site') {
+    const out = path.resolve(arg(argv, '--out', 'site'));
+    const { buildSite } = require('../lib/build-site');
+    const r = buildSite(out);
+    console.log(`built multi-course site -> ${r.outDir}`);
+    console.log(`  courses: ${r.courses.map((c) => c.id).join(', ')}`);
+    console.log(`  total: ${r.lessons} lessons / ${r.exercises} exercises across ${r.courses.length} course(s)`);
+    console.log(`  GitHub Pages ready: commit ${r.outDir}/ — index.html is the hub, one folder per course`);
+    return r;
+  }
+
   const courseDir = argv[1] || 'courses/rust-hlock';
   if (!fs.existsSync(courseDir)) throw new Error(`course dir not found: ${courseDir}`);
   const abs = path.resolve(courseDir);
